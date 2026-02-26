@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Generated start script (created by install.sh at install time)
+meshclaude.sh
+
+# Config and user data
+~/.config/meshclaude/
+
+# Logs
+*.log
+/tmp/meshclaude.log
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Textual dev
+.textual/
