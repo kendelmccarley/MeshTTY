@@ -32,6 +32,22 @@ class _SerialInterface(meshtastic.serial_interface.SerialInterface):
             else:
                 raise
 
+    def waitForConfig(self) -> None:
+        try:
+            super().waitForConfig()
+        except Exception as exc:
+            if "Timed out" in str(exc):
+                has_myinfo = getattr(self, "myInfo", None)
+                has_nodes = getattr(self, "nodes", None)
+                if has_myinfo and has_nodes:
+                    log.warning(
+                        "waitForConfig timed out but myInfo and %d nodes present — "
+                        "proceeding without full config (channels/localConfig incomplete)",
+                        len(self.nodes),
+                    )
+                    return
+            raise
+
 
 class SerialTransport(TransportManager):
     def __init__(self, dev_path: str) -> None:
