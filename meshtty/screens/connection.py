@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+log = logging.getLogger(__name__)
+
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -181,7 +183,6 @@ class ConnectionScreen(Screen):
 
     @work(thread=True, exclusive=True, name="connector")
     def _connect_worker(self, transport) -> None:
-        log = logging.getLogger(__name__)
         log.debug("Attempting connection: %s", transport)
         try:
             transport.connect()
@@ -237,6 +238,7 @@ class ConnectionScreen(Screen):
         self.query_one("#connect-btn", Button).disabled = True
 
         active_tab = self.query_one(TabbedContent).active
+        log.debug("_attempt_connect: active_tab=%r", active_tab)
 
         if active_tab == "tab-serial":
             port = self.query_one("#serial-input", Input).value.strip()
@@ -270,6 +272,8 @@ class ConnectionScreen(Screen):
             transport = BLETransport(addr)
 
         else:
+            log.debug("_attempt_connect: unrecognised tab %r — aborting", active_tab)
+            self._set_error(f"Unknown tab: {active_tab!r}")
             self._reset_connect_btn()
             return
 
