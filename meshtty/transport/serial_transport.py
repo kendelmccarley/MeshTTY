@@ -10,10 +10,27 @@ _CONNECT_TIMEOUT = 120.0  # seconds; default 30s is too short for large node DBs
 
 
 class _SerialInterface(meshtastic.serial_interface.SerialInterface):
-    """SerialInterface with an extended _waitConnected timeout."""
+    """SerialInterface that recovers when configCompleteId is lost in a noisy stream.
+
+    Some radios (e.g. Heltec V3) mix UART debug text into the serial stream,
+    which corrupts protobuf framing and can cause configCompleteId to be lost.
+    If _waitConnected times out but the interface already has node data, we
+    force the connected state ourselves so the app can proceed normally.
+    """
 
     def _waitConnected(self, timeout: float = _CONNECT_TIMEOUT) -> None:
-        super()._waitConnected(timeout=timeout)
+        try:
+            super()._waitConnected(timeout=timeout)
+        except Exception as exc:
+            if "Timed out" in str(exc) and self.nodes:
+                log.warning(
+                    "_waitConnected timed out but %d nodes present — "
+                    "forcing connected state (configCompleteId likely lost in noisy stream)",
+                    len(self.nodes),
+                )
+                self._connected()  # sets isConnected, starts heartbeat, fires pubsub event
+            else:
+                raise
 
 
 class SerialTransport(TransportManager):
