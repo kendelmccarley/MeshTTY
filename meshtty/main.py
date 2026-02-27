@@ -32,12 +32,24 @@ LOG_FILE = "/tmp/meshtty.log"
 
 def _setup_logging(level: str, debug: bool = False) -> None:
     effective_level = logging.DEBUG if debug else getattr(logging, level.upper(), logging.WARNING)
-    # Configure the root logger so the meshtastic library's own loggers are captured too.
-    root = logging.getLogger()
-    root.setLevel(effective_level)
     handler = logging.FileHandler(LOG_FILE)
     handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
-    root.addHandler(handler)
+
+    # Apply the effective level only to our own loggers.  Setting the ROOT
+    # logger to DEBUG causes the meshtastic library (and every other library)
+    # to emit thousands of debug entries per second, flooding the log file and
+    # consuming significant CPU for string formatting.
+    app_log = logging.getLogger("meshtty")
+    app_log.setLevel(effective_level)
+    app_log.addHandler(handler)
+    app_log.propagate = False  # don't double-log via root
+
+    # Capture meshtastic library warnings/errors but suppress its debug spam.
+    mesh_log = logging.getLogger("meshtastic")
+    mesh_log.setLevel(logging.WARNING)
+    if not mesh_log.handlers:
+        mesh_log.addHandler(handler)
+    mesh_log.propagate = False
 
 
 class MeshTTYApp(App):

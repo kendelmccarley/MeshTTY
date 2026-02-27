@@ -11,7 +11,7 @@ from textual.widgets import Label, ListView, ListItem
 class ChannelList(Widget):
     """Displays configured channels and fires ChannelSelected on click."""
 
-    class ChannelSelected(Message):
+    class ChannelSelected(Message, bubble=False):
         def __init__(self, channel_index: int) -> None:
             self.channel_index = channel_index
             super().__init__()

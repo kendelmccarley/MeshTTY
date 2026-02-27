@@ -1,20 +1,28 @@
 """Custom Textual Message subclasses for inter-component communication.
 
 All messages originate in the EventBridge and are dispatched by Textual to
-registered handlers.  bubble = False on every class is critical: these are
-app-level routed messages, not DOM-bubbling events.  Without it, a message
-posted to the App gets re-posted to the Screen; when the Screen handler
-finishes the message bubbles back to the App, which re-posts to the Screen
-again — an infinite loop that pegs the CPU to 100%.
+registered handlers.
+
+CRITICAL — bubble=False MUST be set as a class-declaration keyword argument,
+NOT as a plain class-body attribute.  Textual's Message.__init_subclass__
+accepts 'bubble' as a keyword and ALWAYS sets cls.bubble from it, using
+True as the default.  A class-body "bubble = False" is created first, then
+__init_subclass__ overwrites it back to True.  Only the keyword syntax:
+
+    class Foo(Message, bubble=False):
+
+correctly passes bubble=False into __init_subclass__ so it stays False.
+
+Without this, every NodeUpdated posted to the App bounces App → Screen →
+App → Screen → … in an infinite loop, pegging the CPU to 100% and filling
+the asyncio queue with millions of messages (7+ GB of RAM in minutes).
 """
 
 from textual.message import Message
 
 
-class TextMessageReceived(Message):
+class TextMessageReceived(Message, bubble=False):
     """A text message arrived from the mesh network."""
-
-    bubble = False
 
     def __init__(self, packet: dict) -> None:
         self.packet = packet
@@ -28,10 +36,8 @@ class TextMessageReceived(Message):
         super().__init__()
 
 
-class NodeUpdated(Message):
+class NodeUpdated(Message, bubble=False):
     """A node's information has changed (position, telemetry, first seen, etc.)."""
-
-    bubble = False
 
     def __init__(self, node_id: str, node_info: dict) -> None:
         self.node_id = node_id
@@ -39,30 +45,24 @@ class NodeUpdated(Message):
         super().__init__()
 
 
-class ConnectionEstablished(Message):
+class ConnectionEstablished(Message, bubble=False):
     """Radio connection was successfully established."""
-
-    bubble = False
 
     def __init__(self, transport) -> None:
         self.transport = transport
         super().__init__()
 
 
-class ConnectionLost(Message):
+class ConnectionLost(Message, bubble=False):
     """Radio connection was lost or failed to connect."""
-
-    bubble = False
 
     def __init__(self, reason: str = "") -> None:
         self.reason = reason
         super().__init__()
 
 
-class TransportChanged(Message):
+class TransportChanged(Message, bubble=False):
     """User switched to a different transport type."""
-
-    bubble = False
 
     def __init__(self, transport_type: str) -> None:
         self.transport_type = transport_type
