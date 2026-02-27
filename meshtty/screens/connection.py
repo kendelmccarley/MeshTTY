@@ -163,6 +163,9 @@ class ConnectionScreen(Screen):
             table.add_row(p["port"], p["description"], key=p["port"])
         if ports:
             self._set_status(f"Found {len(ports)} serial device(s).")
+            # Auto-populate the input when exactly one device is detected
+            if len(ports) == 1:
+                self.query_one("#serial-input", Input).value = ports[0]["port"]
         else:
             self._set_status("No serial devices detected. Enter port manually.")
 
@@ -220,6 +223,14 @@ class ConnectionScreen(Screen):
             self._attempt_connect()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        if event.data_table.id == "serial-table":
+            self.query_one("#serial-input", Input).value = str(event.row_key.value)
+        elif event.data_table.id == "ble-table":
+            self.query_one("#ble-input", Input).value = str(event.row_key.value)
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        if event.row_key is None:
+            return
         if event.data_table.id == "serial-table":
             self.query_one("#serial-input", Input).value = str(event.row_key.value)
         elif event.data_table.id == "ble-table":
