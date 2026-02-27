@@ -73,16 +73,17 @@ class EventBridge:
     def unsubscribe(self) -> None:
         if not self._subscribed:
             return
-        for topic in (
-            "meshtastic.receive.text",
-            "meshtastic.receive.position",
-            "meshtastic.receive.telemetry",
-            "meshtastic.node.updated",
-            "meshtastic.connection.established",
-            "meshtastic.connection.lost",
-        ):
+        pairs = [
+            ("meshtastic.receive.text", self._on_text),
+            ("meshtastic.receive.position", self._on_position),
+            ("meshtastic.receive.telemetry", self._on_telemetry),
+            ("meshtastic.node.updated", self._on_node_updated),
+            ("meshtastic.connection.established", self._on_connected),
+            ("meshtastic.connection.lost", self._on_lost),
+        ]
+        for topic, handler in pairs:
             try:
-                pub.unsubscribe(self._on_text, topic)
+                pub.unsubscribe(handler, topic)
             except Exception:
                 pass
         self._subscribed = False
@@ -136,13 +137,11 @@ class EventBridge:
             log.error("_on_node_updated bridge error: %s", exc)
 
     def _on_connected(self, interface, topic=pub.AUTO_TOPIC) -> None:  # noqa: ANN001
-        try:
-            self._app.call_from_thread(
-                self._app.post_message,
-                ConnectionEstablished(self._app.transport),
-            )
-        except Exception as exc:
-            log.error("_on_connected bridge error: %s", exc)
+        # NOTE: self._app.transport is not yet set when this fires — the worker
+        # sets it after SerialInterface() returns.  The connection screen's
+        # _on_connect_success handles posting ConnectionEstablished with the
+        # real transport once the worker finishes.
+        log.debug("meshtastic.connection.established received")
 
     def _on_lost(self, interface, topic=pub.AUTO_TOPIC) -> None:  # noqa: ANN001
         try:

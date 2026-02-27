@@ -273,7 +273,14 @@ class ConnectionScreen(Screen):
             self._reset_connect_btn()
             return
 
-        self.app.bridge.subscribe()
+        try:
+            self.app.bridge.subscribe()
+        except Exception as exc:
+            log.exception("bridge.subscribe() failed")
+            self._set_error(f"Event subscription failed: {exc}")
+            self._reset_connect_btn()
+            return
+
         self._connect_worker(transport)
 
     def _on_connect_success(self) -> None:
