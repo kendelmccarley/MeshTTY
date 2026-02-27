@@ -9,7 +9,7 @@ from textual.widgets import Label, ListView, ListItem
 
 
 class ChannelList(Widget):
-    """Displays channels 0–7 and fires ChannelSelected on click."""
+    """Displays configured channels and fires ChannelSelected on click."""
 
     class ChannelSelected(Message):
         def __init__(self, channel_index: int) -> None:
@@ -32,15 +32,17 @@ class ChannelList(Widget):
     }
     """
 
-    NUM_CHANNELS = 8
-
     def compose(self) -> ComposeResult:
         yield Label("Channels")
-        items = [
-            ListItem(Label(f"  Ch {i}"), id=f"ch-{i}")
-            for i in range(self.NUM_CHANNELS)
-        ]
-        yield ListView(*items, id="channel-listview")
+        yield ListView(id="channel-listview")
+
+    def on_mount(self) -> None:
+        """Populate with channels actually configured on the radio."""
+        transport = self.app.transport
+        channels = transport.get_channels() if transport else [(0, "Primary")]
+        lv = self.query_one("#channel-listview", ListView)
+        for idx, name in channels:
+            lv.append(ListItem(Label(f"  {name}"), id=f"ch-{idx}"))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         item_id = event.item.id or ""

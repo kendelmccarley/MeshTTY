@@ -44,6 +44,13 @@ class MessagesView(Widget):
         self._current_channel = self.app.config.default_channel
         self._load_history(self._current_channel)
 
+    def on_show(self) -> None:
+        """Re-focus compose input whenever the Messages tab becomes active."""
+        try:
+            self.query_one("#compose-input").focus()
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------

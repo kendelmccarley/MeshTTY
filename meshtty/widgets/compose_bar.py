@@ -46,6 +46,9 @@ class ComposeBar(Widget):
             yield Input(placeholder="Type a message… (Enter to send)", id="compose-input")
             yield Button("Send", id="send-btn", variant="primary")
 
+    def on_mount(self) -> None:
+        self.query_one("#compose-input", Input).focus()
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self._do_send()
 

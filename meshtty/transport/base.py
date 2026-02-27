@@ -37,6 +37,29 @@ class TransportManager(ABC):
             return {}
         return self._interface.getMyNodeInfo() or {}
 
+    def get_channels(self) -> list[tuple[int, str]]:
+        """Return list of (index, name) for configured (non-disabled) channels.
+
+        Falls back to [(0, 'Primary')] if channel config is unavailable.
+        """
+        if self._interface is None:
+            return [(0, "Primary")]
+        try:
+            chans = self._interface.localNode.channels
+            result = []
+            for i, ch in enumerate(chans):
+                # role 0 == DISABLED in Meshtastic protobuf
+                if getattr(ch, "role", 0) != 0:
+                    try:
+                        name = ch.settings.name.strip()
+                    except Exception:
+                        name = ""
+                    display = name if name else ("Primary" if i == 0 else f"Ch {i}")
+                    result.append((i, display))
+            return result if result else [(0, "Primary")]
+        except Exception:
+            return [(0, "Primary")]
+
     @property
     def transport_type(self) -> str:
         """Return a human-readable transport type name."""
