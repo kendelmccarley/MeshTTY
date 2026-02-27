@@ -30,9 +30,9 @@ class MessagesView(Widget):
     }
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._current_channel = self.app.config.default_channel if hasattr(self, 'app') else 0
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._current_channel = 0  # updated in on_mount once app is available
 
     def compose(self) -> ComposeResult:
         yield ChannelList()
