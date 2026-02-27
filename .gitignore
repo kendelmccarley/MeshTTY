@@ -14,15 +14,12 @@ build/
 venv/
 env/
 
-# Generated start script (created by install.sh at install time)
-meshclaude.sh
-
 # Config and user data
-~/.config/meshclaude/
+~/.config/meshtty/
 
 # Logs
 *.log
-/tmp/meshclaude.log
+/tmp/meshtty.log
 
 # IDE / editor
 .vscode/
@@ -30,6 +27,9 @@ meshclaude.sh
 *.swp
 *.swo
 .DS_Store
+
+# macOS metadata
+._*
 
 # Textual dev
 .textual/
