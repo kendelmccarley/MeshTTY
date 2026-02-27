@@ -24,7 +24,7 @@ from textual.widgets import (
     TabPane,
 )
 
-from meshtty.messages.app_messages import ConnectionEstablished, ConnectionLost
+from meshtty.messages.app_messages import ConnectionEstablished, ConnectionLost, NodeUpdated
 from meshtty.transport.ble_transport import BLETransport
 from meshtty.transport.discovery import scan_ble_devices, scan_serial_ports
 from meshtty.transport.serial_transport import SerialTransport
@@ -84,6 +84,8 @@ class ConnectionScreen(Screen):
     def __init__(self) -> None:
         super().__init__()
         self._connecting = False
+        self._download_dots = 0
+        self._download_timer = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -216,6 +218,27 @@ class ConnectionScreen(Screen):
     # Event handlers
     # ------------------------------------------------------------------
 
+    def on_node_updated(self, event: NodeUpdated) -> None:
+        """Count nodes arriving during the connection handshake and show progress."""
+        if not self._connecting:
+            return
+        self._download_dots += 1
+        dots = "." * self._download_dots
+        self._set_status(f"Connected \u2014 downloading nodes: {dots}")
+        # After 3 s with no new nodes the radio has sent everything it knows
+        if self._download_timer is not None:
+            self._download_timer.stop()
+        self._download_timer = self.set_timer(3.0, self._on_download_complete)
+
+    def _on_download_complete(self) -> None:
+        if not self._connecting:
+            return
+        n = self._download_dots
+        label = f"{n} node{'s' if n != 1 else ''}"
+        self._set_status(
+            f"Download complete ({label}) \u2014 waiting for radio confirmation\u2026"
+        )
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "ble-scan-btn":
             self._scan_ble()
@@ -244,6 +267,10 @@ class ConnectionScreen(Screen):
         if self._connecting:
             return
         self._connecting = True
+        self._download_dots = 0
+        if self._download_timer is not None:
+            self._download_timer.stop()
+            self._download_timer = None
         self._clear_error()
         self._set_status("Connecting…")
         self.query_one("#connect-btn", Button).disabled = True
@@ -299,12 +326,21 @@ class ConnectionScreen(Screen):
         self._connect_worker(transport)
 
     def _on_connect_success(self) -> None:
-        self._set_status("Connected!")
+        if self._download_timer is not None:
+            self._download_timer.stop()
+            self._download_timer = None
+        n = self._download_dots
+        node_str = f"{n} node{'s' if n != 1 else ''}" if n else "nodes"
+        self._set_status(f"Connected! ({node_str} loaded)")
         self._connecting = False
         self.app.post_message(ConnectionEstablished(self.app.transport))
         self.app.push_screen("main")
 
     def _on_connect_failure(self, reason: str) -> None:
+        if self._download_timer is not None:
+            self._download_timer.stop()
+            self._download_timer = None
+        self._download_dots = 0
         self._set_error(f"Connection failed: {reason}")
         self.app.bridge.unsubscribe()
         self._connecting = False
