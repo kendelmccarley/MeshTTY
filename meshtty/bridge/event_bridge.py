@@ -3,10 +3,13 @@
 meshtastic-python fires PyPubSub callbacks on its own internal thread.
 Textual's event loop runs on the main asyncio thread.
 
-The ONLY safe crossing point is app.call_from_thread(), which queues a
-callable into Textual's event loop from any non-async thread.
+post_message() is already thread-safe in Textual 8: when called from a
+non-asyncio thread it uses call_soon_threadsafe() internally, which is
+non-blocking and returns False gracefully if the app is closing.
 
-Never touch widgets or reactive attributes directly from a callback here.
+Never use call_from_thread() here — it blocks the meshtastic thread until
+the main loop processes the coroutine, causing a deadlock if the event loop
+is shutting down.
 """
 
 from __future__ import annotations
@@ -91,13 +94,14 @@ class EventBridge:
 
     # ------------------------------------------------------------------
     # PyPubSub callbacks (run on meshtastic's internal thread)
+    #
+    # Use post_message() directly — it is thread-safe in Textual 8 and
+    # non-blocking.  Never use call_from_thread() here.
     # ------------------------------------------------------------------
 
     def _on_text(self, packet: dict, interface) -> None:  # noqa: ANN001
         try:
-            self._app.call_from_thread(
-                self._app.post_message, TextMessageReceived(packet)
-            )
+            self._app.post_message(TextMessageReceived(packet))
         except Exception as exc:
             log.error("_on_text bridge error: %s", exc)
 
@@ -107,9 +111,7 @@ class EventBridge:
             if node_id and interface and interface.nodes:
                 node = interface.nodes.get(node_id, {})
                 info = _extract_node_info(node)
-                self._app.call_from_thread(
-                    self._app.post_message, NodeUpdated(node_id, info)
-                )
+                self._app.post_message(NodeUpdated(node_id, info))
         except Exception as exc:
             log.error("_on_position bridge error: %s", exc)
 
@@ -119,9 +121,7 @@ class EventBridge:
             if node_id and interface and interface.nodes:
                 node = interface.nodes.get(node_id, {})
                 info = _extract_node_info(node)
-                self._app.call_from_thread(
-                    self._app.post_message, NodeUpdated(node_id, info)
-                )
+                self._app.post_message(NodeUpdated(node_id, info))
         except Exception as exc:
             log.error("_on_telemetry bridge error: %s", exc)
 
@@ -130,9 +130,7 @@ class EventBridge:
             node_id = node.get("id") or node.get("num", "")
             if node_id:
                 info = _extract_node_info(node)
-                self._app.call_from_thread(
-                    self._app.post_message, NodeUpdated(str(node_id), info)
-                )
+                self._app.post_message(NodeUpdated(str(node_id), info))
         except Exception as exc:
             log.error("_on_node_updated bridge error: %s", exc)
 
@@ -145,8 +143,6 @@ class EventBridge:
 
     def _on_lost(self, interface, topic=pub.AUTO_TOPIC) -> None:  # noqa: ANN001
         try:
-            self._app.call_from_thread(
-                self._app.post_message, ConnectionLost("Connection lost")
-            )
+            self._app.post_message(ConnectionLost("Connection lost"))
         except Exception as exc:
             log.error("_on_lost bridge error: %s", exc)

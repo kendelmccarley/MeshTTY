@@ -57,28 +57,34 @@ class MainScreen(Screen):
     # ------------------------------------------------------------------
 
     def on_connection_established(self, event: ConnectionEstablished) -> None:
-        self._update_status_connected()
+        try:
+            self._update_status_connected()
+        except Exception:
+            pass
 
     def on_connection_lost(self, event: ConnectionLost) -> None:
-        bar = self.query_one("#status-bar", ConnectionStatusBar)
-        bar.connection_state = "disconnected"
-        bar.channel_name = "—"
-        bar.battery_level = None
+        try:
+            bar = self.query_one("#status-bar", ConnectionStatusBar)
+            bar.connection_state = "disconnected"
+            bar.channel_name = "—"
+            bar.battery_level = None
+        except Exception:
+            pass
 
     def on_text_message_received(self, event: TextMessageReceived) -> None:
-        # Route to the MessagesView
         try:
             self.query_one("#messages-view", MessagesView).post_message(event)
         except Exception:
             pass
 
     def on_node_updated(self, event: NodeUpdated) -> None:
-        # Update node count on status bar
-        transport = self.app.transport
-        if transport:
-            bar = self.query_one("#status-bar", ConnectionStatusBar)
-            bar.node_count = len(transport.get_nodes())
-        # Route to NodeListView
+        try:
+            transport = self.app.transport
+            if transport:
+                bar = self.query_one("#status-bar", ConnectionStatusBar)
+                bar.node_count = len(transport.get_nodes())
+        except Exception:
+            pass
         try:
             self.query_one("#nodes-view", NodeListView).post_message(event)
         except Exception:
@@ -89,29 +95,32 @@ class MainScreen(Screen):
     # ------------------------------------------------------------------
 
     def on_data_table_row_selected(self, event) -> None:
-        node_id = str(event.row_key.value) if event.row_key else None
-        if not node_id:
-            return
-        transport = self.app.transport
-        if transport is None:
-            return
-        nodes = transport.get_nodes()
-        node = nodes.get(node_id, {})
-        user = node.get("user", {})
-        pos = node.get("position", {})
-        metrics = node.get("deviceMetrics", {})
-        info = {
-            "short_name": user.get("shortName", ""),
-            "long_name": user.get("longName", ""),
-            "hw_model": user.get("hwModel", ""),
-            "last_snr": node.get("snr"),
-            "last_lat": pos.get("latitude"),
-            "last_lon": pos.get("longitude"),
-            "last_alt": pos.get("altitude"),
-            "battery": metrics.get("batteryLevel"),
-            "last_heard": node.get("lastHeard"),
-        }
-        self.app.push_screen(NodeDetailModal(node_id, info))
+        try:
+            node_id = str(event.row_key.value) if event.row_key else None
+            if not node_id:
+                return
+            transport = self.app.transport
+            if transport is None:
+                return
+            nodes = transport.get_nodes()
+            node = nodes.get(node_id, {})
+            user = node.get("user", {})
+            pos = node.get("position", {})
+            metrics = node.get("deviceMetrics", {})
+            info = {
+                "short_name": user.get("shortName", ""),
+                "long_name": user.get("longName", ""),
+                "hw_model": user.get("hwModel", ""),
+                "last_snr": node.get("snr"),
+                "last_lat": pos.get("latitude"),
+                "last_lon": pos.get("longitude"),
+                "last_alt": pos.get("altitude"),
+                "battery": metrics.get("batteryLevel"),
+                "last_heard": node.get("lastHeard"),
+            }
+            self.app.push_screen(NodeDetailModal(node_id, info))
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Actions

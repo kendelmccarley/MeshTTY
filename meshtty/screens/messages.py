@@ -56,46 +56,52 @@ class MessagesView(Widget):
     # ------------------------------------------------------------------
 
     def on_channel_list_channel_selected(self, event: ChannelList.ChannelSelected) -> None:
-        self._current_channel = event.channel_index
-        view = self.query_one("#message-view", MessageView)
-        # Clear and reload
-        view.remove_children()
-        self._load_history(self._current_channel)
+        try:
+            self._current_channel = event.channel_index
+            view = self.query_one("#message-view", MessageView)
+            view.remove_children()
+            self._load_history(self._current_channel)
+        except Exception:
+            pass
 
     def on_compose_bar_send_requested(self, event: ComposeBar.SendRequested) -> None:
-        event.stop()
-        text = event.text
-        transport = self.app.transport
-        if transport is None or not transport.is_connected:
-            return
         try:
-            transport.send_text(text, channel=self._current_channel)
+            event.stop()
+            text = event.text
+            transport = self.app.transport
+            if transport is None or not transport.is_connected:
+                return
+            try:
+                transport.send_text(text, channel=self._current_channel)
+            except Exception:
+                return
+            now = int(time.time())
+            my_node = transport.get_my_node()
+            my_id = my_node.get("num", "me") if my_node else "me"
+            my_id_str = f"!{my_id:08x}" if isinstance(my_id, int) else str(my_id)
+            view = self.query_one("#message-view", MessageView)
+            view.append_message(my_id_str, text, now, is_mine=True)
+            self._write_message(my_id_str, "^all", self._current_channel, text, now, True)
         except Exception:
-            return
-        # Show immediately in the UI
-        now = int(time.time())
-        my_node = transport.get_my_node()
-        my_id = my_node.get("num", "me") if my_node else "me"
-        my_id_str = f"!{my_id:08x}" if isinstance(my_id, int) else str(my_id)
-        view = self.query_one("#message-view", MessageView)
-        view.append_message(my_id_str, text, now, is_mine=True)
-        # Persist to DB in background
-        self._write_message(my_id_str, "^all", self._current_channel, text, now, True)
+            pass
 
     def on_text_message_received(self, event: TextMessageReceived) -> None:
-        if event.channel != self._current_channel:
-            return
-        view = self.query_one("#message-view", MessageView)
-        view.append_message(event.from_id, event.text, event.rx_time)
-        self._write_message(
-            event.from_id,
-            event.to_id,
-            event.channel,
-            event.text,
-            event.rx_time,
-            False,
-            event.packet_id,
-        )
+        try:
+            if event.channel != self._current_channel:
+                return
+            view = self.query_one("#message-view", MessageView)
+            view.append_message(event.from_id, event.text, event.rx_time)
+            self._write_message(
+                event.from_id,
+                event.to_id,
+                event.channel,
+                event.text,
+                event.rx_time,
+                False,
+                event.packet_id,
+            )
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Workers

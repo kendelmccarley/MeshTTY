@@ -27,10 +27,12 @@ class NodeListView(Widget):
         self._load_nodes()
 
     def on_node_updated(self, event: NodeUpdated) -> None:
-        table = self.query_one("#node-table", NodeTable)
-        table.upsert_node(event.node_id, event.node_info)
-        # Persist to DB
-        self._save_node(event.node_id, event.node_info)
+        try:
+            table = self.query_one("#node-table", NodeTable)
+            table.upsert_node(event.node_id, event.node_info)
+            self._save_node(event.node_id, event.node_info)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Workers

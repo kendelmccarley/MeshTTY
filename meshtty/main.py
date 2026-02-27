@@ -94,27 +94,38 @@ class MeshTTYApp(App):
     # ------------------------------------------------------------------
 
     def on_connection_established(self, event: ConnectionEstablished) -> None:
-        logging.getLogger(__name__).info(
-            "Connection established via %s", self.transport
-        )
+        try:
+            logging.getLogger(__name__).info(
+                "Connection established via %s", self.transport
+            )
+        except Exception:
+            pass
 
     def on_connection_lost(self, event: ConnectionLost) -> None:
-        logging.getLogger(__name__).warning("Connection lost: %s", event.reason)
-        if self.transport:
-            try:
-                self.transport.disconnect()
-            except Exception:
-                pass
-            self.transport = None
+        try:
+            logging.getLogger(__name__).warning("Connection lost: %s", event.reason)
+            if self.transport:
+                try:
+                    self.transport.disconnect()
+                except Exception:
+                    pass
+                self.transport = None
+        except Exception:
+            pass
 
     def on_text_message_received(self, event: TextMessageReceived) -> None:
-        # Bubble down into the active screen
-        if self.screen:
-            self.screen.post_message(event)
+        try:
+            if self.screen:
+                self.screen.post_message(event)
+        except Exception:
+            pass
 
     def on_node_updated(self, event: NodeUpdated) -> None:
-        if self.screen:
-            self.screen.post_message(event)
+        try:
+            if self.screen:
+                self.screen.post_message(event)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Actions
