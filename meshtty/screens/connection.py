@@ -151,7 +151,7 @@ class ConnectionScreen(Screen):
     # Workers
     # ------------------------------------------------------------------
 
-    @work(thread=True, exclusive=True, name="serial-scan")
+    @work(thread=True, exclusive=True, name="serial-scan", exit_on_error=False)
     def _scan_serial(self) -> None:
         ports = scan_serial_ports()
         self.app.call_from_thread(self._populate_serial_table, ports)

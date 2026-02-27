@@ -78,8 +78,12 @@ class NodeTable(Widget):
             for col_idx, (_, col_key) in enumerate(COLUMNS):
                 table.update_cell(node_id, col_key, row_values[col_idx])
         except Exception:
-            # Row doesn't exist yet — add it
-            table.add_row(*row_values, key=node_id)
+            try:
+                # Row doesn't exist yet — add it
+                table.add_row(*row_values, key=node_id)
+            except Exception:
+                # Row was added concurrently; ignore
+                pass
 
     def populate(self, nodes: dict) -> None:
         """Bulk-populate from transport.get_nodes() dict."""

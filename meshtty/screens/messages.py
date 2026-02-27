@@ -101,7 +101,7 @@ class MessagesView(Widget):
     # Workers
     # ------------------------------------------------------------------
 
-    @work(thread=True, name="load-history")
+    @work(thread=True, name="load-history", exit_on_error=False)
     def _load_history(self, channel: int) -> None:
         rows = self.app.db.get_messages(channel=channel, limit=200)
         self.app.call_from_thread(self._apply_history, rows)
@@ -110,7 +110,7 @@ class MessagesView(Widget):
         view = self.query_one("#message-view", MessageView)
         view.load_messages(rows)
 
-    @work(thread=True, name="write-message")
+    @work(thread=True, name="write-message", exit_on_error=False)
     def _write_message(
         self,
         from_id: str,

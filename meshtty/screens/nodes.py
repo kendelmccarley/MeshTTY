@@ -36,7 +36,7 @@ class NodeListView(Widget):
     # Workers
     # ------------------------------------------------------------------
 
-    @work(thread=True, name="load-nodes")
+    @work(thread=True, name="load-nodes", exit_on_error=False)
     def _load_nodes(self) -> None:
         transport = self.app.transport
         if transport is None:
@@ -47,6 +47,6 @@ class NodeListView(Widget):
     def _apply_nodes(self, nodes: dict) -> None:
         self.query_one("#node-table", NodeTable).populate(nodes)
 
-    @work(thread=True, name="save-node")
+    @work(thread=True, name="save-node", exit_on_error=False)
     def _save_node(self, node_id: str, info: dict) -> None:
         self.app.db.upsert_node(node_id, info)
