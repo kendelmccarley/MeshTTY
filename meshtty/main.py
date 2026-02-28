@@ -195,6 +195,14 @@ class MeshTTYApp(App):
 
 
 def main() -> None:
+    if not sys.stdin.isatty():
+        print(
+            "Error: MeshTTY requires an interactive terminal.\n"
+            "Run in a terminal emulator or on a console TTY, not piped or redirected.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="MeshTTY — Meshtastic TUI client")
     parser.add_argument(
         "--debug",

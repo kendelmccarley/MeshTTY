@@ -126,6 +126,17 @@ cat > "$START_SCRIPT" << STARTSCRIPT
 VENV="$VENV_DIR"
 APP_DIR="$SCRIPT_DIR"
 
+# Require an interactive terminal — Textual cannot run without one
+if ! [[ -t 0 && -t 1 ]]; then
+    echo "ERROR: MeshTTY requires an interactive terminal (stdin/stdout must be a TTY)." >&2
+    exit 1
+fi
+
+# Ensure a capable TERM for Textual rendering
+if [[ "\$TERM" == "dumb" || -z "\$TERM" ]]; then
+    export TERM=xterm-256color
+fi
+
 if [[ ! -f "\$VENV/bin/activate" ]]; then
     echo "ERROR: virtualenv not found at \$VENV"
     echo "Please re-run install.sh"
@@ -134,6 +145,20 @@ fi
 
 source "\$VENV/bin/activate"
 cd "\$APP_DIR"
+
+# At boot, wait up to 10 s for a USB serial device to enumerate if serial
+# is the configured transport.  Harmless no-op once the device is present.
+CONFIG="\$HOME/.config/meshtty/config.json"
+if grep -q '"default_transport".*"serial"' "\$CONFIG" 2>/dev/null; then
+    if ! ls /dev/ttyUSB* /dev/ttyACM* >/dev/null 2>&1; then
+        echo "Waiting for USB serial device..."
+        for _i in \$(seq 1 10); do
+            ls /dev/ttyUSB* /dev/ttyACM* >/dev/null 2>&1 && break
+            sleep 1
+        done
+    fi
+fi
+
 exec python -m meshtty.main "\$@"
 STARTSCRIPT
 chmod +x "$START_SCRIPT"
@@ -147,17 +172,23 @@ if $IS_PI; then
     echo ">>> Raspberry Pi detected."
     read -r -p ">>> Auto-launch MeshTTY on tty1 login (physical screen)? [y/N] " answer
     if [[ "${answer,,}" == "y" ]]; then
-        BASHRC="$HOME/.bashrc"
+        BASH_PROFILE="$HOME/.bash_profile"
         LAUNCH_BLOCK="
 # MeshTTY auto-launch on tty1 (physical Pi screen)
 if [[ \"\$(tty)\" == \"/dev/tty1\" ]]; then
-    exec $START_SCRIPT
+    export TERM=xterm-256color
+    while true; do
+        $START_SCRIPT
+        sleep 2
+    done
 fi"
-        if ! grep -q "meshtty auto-launch" "$BASHRC"; then
-            echo "$LAUNCH_BLOCK" >> "$BASHRC"
-            echo ">>> Added auto-launch block to $BASHRC"
+        # Check both .bash_profile and .bashrc to avoid duplicating an older install
+        if ! grep -q "meshtty auto-launch" "$BASH_PROFILE" 2>/dev/null \
+           && ! grep -q "meshtty auto-launch" "$HOME/.bashrc" 2>/dev/null; then
+            echo "$LAUNCH_BLOCK" >> "$BASH_PROFILE"
+            echo ">>> Added auto-launch block to $BASH_PROFILE"
         else
-            echo ">>> Auto-launch already present in $BASHRC, skipping."
+            echo ">>> Auto-launch already present in shell profile, skipping."
         fi
     fi
 fi
