@@ -20,11 +20,12 @@ or Bluetooth (BLE).
 3. [Command-Line Flags](#3-command-line-flags)
 4. [Connection Screen](#4-connection-screen)
 5. [Main Screen](#5-main-screen)
-   - 5.1 [Messages Tab (F1)](#51-messages-tab-f1)
-   - 5.2 [Channels Tab (F2)](#52-channels-tab-f2)
-   - 5.3 [Nodes Tab (F3)](#53-nodes-tab-f3)
+   - 5.1 [Messages Tab](#51-messages-tab)
+   - 5.2 [Channels Tab](#52-channels-tab)
+   - 5.3 [Nodes Tab](#53-nodes-tab)
    - 5.4 [Node Detail Modal](#54-node-detail-modal)
-   - 5.5 [Settings Tab (F4)](#55-settings-tab-f4)
+   - 5.5 [Settings Tab](#55-settings-tab)
+   - 5.6 [DM Slash Commands](#56-dm-slash-commands)
 6. [Keyboard Shortcuts](#6-keyboard-shortcuts)
 7. [Configuration File](#7-configuration-file)
 8. [Message & Node Database](#8-message--node-database)
@@ -135,10 +136,10 @@ so the same transport and address are pre-filled on the next launch.
   "Connected! (N nodes loaded)".
 - A red error line shows the failure reason if a connection attempt fails.
 
-> **Note:** On busy networks (many nodes), the download phase can take a
-> minute or more.  The 3-second idle timer may fire and show "download
-> complete" while nodes are still arriving.  Wait for "Connected!" to appear
-> before concluding the connection failed.
+> **Note:** On busy networks (many nodes), the app transitions to the Main
+> Screen as soon as the initial radio handshake completes.  Remaining node
+> records continue to arrive in the background and appear in the Nodes tab
+> as they come in.
 
 ### Keyboard shortcuts (Connection Screen)
 
@@ -151,13 +152,13 @@ so the same transport and address are pre-filled on the next launch.
 ## 5. Main Screen
 
 After a successful connection the app switches to the Main Screen, which has
-four tabs and a footer bar showing available key bindings.
+four tabs.
 
 The header bar has been intentionally removed to maximise usable display area.
 
 ---
 
-### 5.1 Messages Tab (F1)
+### 5.1 Messages Tab
 
 A unified, scrollable message history for all channels and direct messages,
 plus a compose bar at the bottom.
@@ -207,7 +208,7 @@ the local database on startup.
 
 ---
 
-### 5.2 Channels Tab (F2)
+### 5.2 Channels Tab
 
 Lists all channels configured on the connected radio.
 
@@ -217,7 +218,7 @@ Lists all channels configured on the connected radio.
 
 ---
 
-### 5.3 Nodes Tab (F3)
+### 5.3 Nodes Tab
 
 A live table of all mesh nodes known to the radio.  Updates in real time as
 position, telemetry, and node-info packets are received.
@@ -252,7 +253,7 @@ Fields show `—` when no value has been received.  Close with **Close**,
 
 ---
 
-### 5.5 Settings Tab (F4)
+### 5.5 Settings Tab
 
 #### Connection section (top)
 
@@ -290,6 +291,53 @@ other settings apply on the next connection.
 
 ---
 
+### 5.6 DM Slash Commands
+
+MeshTTY recognises a set of slash commands when they arrive as **direct
+messages** (not channel broadcasts).  Any DM whose text begins with `/` is
+checked against the command list.
+
+- Valid commands are displayed in the message history and an automatic reply
+  is sent back to the sender.
+- Unrecognised `/` commands are silently dropped and not displayed.
+
+#### Available commands
+
+| Command    | Response                                                          |
+|------------|-------------------------------------------------------------------|
+| `/HELP`    | Lists all available commands.                                     |
+| `/JOKE`    | Returns the next joke from the joke file (sequential, wraps).     |
+| `/GPIO`    | Returns the state of exported GPIO pins read via sysfs.           |
+| `/WEATHER` | Returns a placeholder string (feature not implemented).           |
+| `/NEWS`    | Returns a placeholder string.                                     |
+| `/NULL`    | Returns "All is nothingness".                                     |
+
+Commands are case-insensitive (`/joke`, `/JOKE`, and `/Joke` all work).
+
+#### Joke file setup
+
+`/JOKE` reads from a CSV file that is **not included in the repository**.
+Place the file at:
+
+```
+meshtty/data/shortjokes.csv
+```
+
+The file must be a CSV with a `Joke` column header on the first row and one
+joke per subsequent row.  A compatible file is available from
+[Kaggle — Short Jokes dataset](https://www.kaggle.com/datasets/abhinavmoudgil95/short-jokes).
+
+If the file is absent, `/JOKE` responds with:
+
+> No joke for you.  It's a dull day.
+
+The file is loaded once in the background at startup.  The joke counter
+position is saved to `~/.config/meshtty/joke_index` after each `/JOKE`
+command and restored on the next run, so the sequence continues where it
+left off.
+
+---
+
 ## 6. Keyboard Shortcuts
 
 ### Connection Screen
@@ -300,17 +348,18 @@ other settings apply on the next connection.
 
 ### Main Screen
 
-| Key      | Action                                        |
-|----------|-----------------------------------------------|
-| F1       | Switch to Messages tab                        |
-| F2       | Switch to Channels tab                        |
-| F3       | Switch to Nodes tab                           |
-| F4       | Switch to Settings tab                        |
-| ↑ / ↓   | Scroll message history up / down one line     |
-| PgUp/PgDn| Scroll message history up / down one screen   |
-| Ctrl+R   | Refresh node table from radio                 |
-| Ctrl+D   | Disconnect and return to Connection Screen    |
-| Ctrl+Q   | Quit                                          |
+| Key       | Action                                        |
+|-----------|-----------------------------------------------|
+| F1        | Help — show keyboard shortcut reference       |
+| Ctrl+T    | Switch to Messages tab                        |
+| Ctrl+L    | Switch to Channels tab                        |
+| Ctrl+N    | Switch to Nodes tab                           |
+| Ctrl+S    | Switch to Settings tab                        |
+| ↑ / ↓    | Scroll message history up / down one line     |
+| PgUp/PgDn | Scroll message history up / down one screen   |
+| Ctrl+R    | Refresh node table from radio                 |
+| Ctrl+D    | Disconnect and return to Connection Screen    |
+| Ctrl+Q    | Quit                                          |
 
 ### Node Detail Modal
 
@@ -468,18 +517,6 @@ This is a pre-alpha release.  The following are known to be broken or absent:
 
 ### Confirmed bugs
 
-- **Connection screen loop on busy networks** — On networks with many active
-  nodes, the 3-second idle timer fires and shows "download complete" before
-  all nodes have arrived.  More nodes then arrive, resetting the timer.  The
-  loop eventually resolves once the radio completes its handshake.  A second
-  connection attempt always succeeds.
-- **F-key tab switching may flash on first press** — Pressing F1–F4 to switch
-  tabs can visually flash on some terminal emulators before settling on the
-  correct tab.  Pressing the key a second time reliably switches.
-- **Occasional `NoActiveAppError` on connect** — Seen in logs when the
-  meshtastic library's internal thread tries to access app state during the
-  connection handshake.  Transient; does not affect operation after connection
-  completes.
 - **`display_prefix` missing from old database rows** — Messages stored before
   this version have an empty `display_prefix` column; they fall back to
   displaying the raw `from_id` node string.
@@ -488,8 +525,6 @@ This is a pre-alpha release.  The following are known to be broken or absent:
 
 - **Auto-connect on launch** — The `auto_connect` config key is saved but the
   connection screen does not yet auto-connect on startup.
-- **Direct message sending** — The compose bar prefix routing is wired up but
-  has not been tested against a live radio with multiple nodes.
 - **Channel switching confirmation** — Clicking a channel in the Channels tab
   switches the compose prefix but does not visually confirm which channel is
   active.
@@ -509,9 +544,12 @@ This is a pre-alpha release.  The following are known to be broken or absent:
 
 ## 13. Troubleshooting
 
-### Connection loops or hangs during node download
+### Slow connection or hangs during node download
 
-Run with `--debug` and watch the log.  If you see:
+The app transitions to the Main Screen as soon as the initial radio handshake
+completes (`connection.established`).  On very busy networks the meshtastic
+library may still time out waiting for the full radio config.  Run with
+`--debug` and watch the log.  If you see:
 
 ```
 _waitConnected timed out but N nodes present — forcing connected state
@@ -523,10 +561,9 @@ or
 waitForConfig timed out but myInfo and N nodes present — proceeding without full config
 ```
 
-the transport timed out waiting for the radio's config exchange on a busy
-network.  The connection will complete anyway.  If the app appears stuck,
-quit and reconnect — the second attempt typically succeeds immediately because
-the radio's config is already cached.
+the transport forced a connection after a timeout.  This is usually harmless —
+node records continue arriving after the transition.  If the app appears
+completely stuck, quit (Ctrl+Q) and reconnect.
 
 ### Serial device detected but connection fails
 

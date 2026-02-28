@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Footer, TabbedContent, TabPane
+from textual.widgets import TabbedContent, TabPane
 
 from meshtty.messages.app_messages import (
     ConnectionEstablished,
@@ -27,23 +27,22 @@ class MainScreen(Screen):
         Binding("ctrl+q", "app.quit", "Quit"),
         Binding("ctrl+d", "app.disconnect", "Disconnect"),
         Binding("ctrl+r", "refresh_nodes", "Refresh"),
-        Binding("f1", "switch_tab('tab-messages')", "Messages", priority=True),
-        Binding("f2", "switch_tab('tab-channels')", "Channels", priority=True),
-        Binding("f3", "switch_tab('tab-nodes')", "Nodes", priority=True),
-        Binding("f4", "switch_tab('tab-settings')", "Settings", priority=True),
+        Binding("ctrl+t", "switch_tab('tab-messages')", "Messages", priority=True),
+        Binding("ctrl+l", "switch_tab('tab-channels')", "Channels", priority=True),
+        Binding("ctrl+n", "switch_tab('tab-nodes')", "Nodes", priority=True),
+        Binding("ctrl+s", "switch_tab('tab-settings')", "Settings", priority=True),
     ]
 
     def compose(self) -> ComposeResult:
         with TabbedContent(id="main-tabs", initial="tab-messages"):
-            with TabPane("Messages [F1]", id="tab-messages"):
+            with TabPane("Messages", id="tab-messages"):
                 yield MessagesView(id="messages-view")
-            with TabPane("Channels [F2]", id="tab-channels"):
+            with TabPane("Channels", id="tab-channels"):
                 yield ChannelView(id="channels-view")
-            with TabPane("Nodes [F3]", id="tab-nodes"):
+            with TabPane("Nodes", id="tab-nodes"):
                 yield NodeListView(id="nodes-view")
-            with TabPane("Settings [F4]", id="tab-settings"):
+            with TabPane("Settings", id="tab-settings"):
                 yield SettingsView(id="settings-view")
-        yield Footer()
 
     def on_mount(self) -> None:
         pass

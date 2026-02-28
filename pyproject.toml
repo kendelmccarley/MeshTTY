@@ -23,3 +23,6 @@ meshtty = "meshtty.main:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["meshtty*"]
+
+[tool.setuptools.package-data]
+"meshtty.data" = ["*.csv"]

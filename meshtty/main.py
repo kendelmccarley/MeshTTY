@@ -10,9 +10,11 @@ import logging
 import sys
 
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.widgets import Label
 
 from meshtty.bridge.event_bridge import EventBridge
+from meshtty.commands.command_handler import CommandHandler
 from meshtty.config.settings import AppConfig, load_config
 from meshtty.themes import ALL_THEMES
 from meshtty.db.database import Database
@@ -60,6 +62,10 @@ class MeshTTYApp(App):
     TITLE = "MeshTTY"
     SUB_TITLE = "Meshtastic for Raspberry Pi"
 
+    BINDINGS = [
+        Binding("f1", "show_help", "Help"),
+    ]
+
     SCREENS = {
         "connection": ConnectionScreen,
         "main": MainScreen,
@@ -71,6 +77,7 @@ class MeshTTYApp(App):
     config: AppConfig = None  # type: ignore[assignment]
     db: Database = None       # type: ignore[assignment]
     bridge: EventBridge = None  # type: ignore[assignment]
+    command_handler: CommandHandler = None  # type: ignore[assignment]
 
     def on_mount(self) -> None:
         self.config = load_config()
@@ -79,6 +86,7 @@ class MeshTTYApp(App):
             logging.getLogger(__name__).debug("Debug logging active → %s", LOG_FILE)
         self.db = Database(self.config.db_path)
         self.bridge = EventBridge(self)
+        self.command_handler = CommandHandler()
 
         for t in ALL_THEMES:
             self.register_theme(t)
@@ -110,6 +118,11 @@ class MeshTTYApp(App):
             logging.getLogger(__name__).info(
                 "Connection established via %s", self.transport
             )
+            # Forward to the current screen so ConnectionScreen can transition
+            # early (before transport.connect() returns) and MainScreen can
+            # refresh its connection-status widgets.
+            if self.screen:
+                self.screen.post_message(event)
         except Exception:
             pass
 
@@ -143,6 +156,10 @@ class MeshTTYApp(App):
     # Actions
     # ------------------------------------------------------------------
 
+    def action_show_help(self) -> None:
+        from meshtty.screens.help_modal import HelpModal
+        self.push_screen(HelpModal())
+
     def action_disconnect(self) -> None:
         self.bridge.unsubscribe()
         if self.transport:
@@ -161,6 +178,14 @@ class MeshTTYApp(App):
         if self.transport:
             try:
                 self.transport.disconnect()
+            except Exception:
+                pass
+        # Disconnect in-progress transport if Ctrl+Q arrived while connecting.
+        # Without this the serial port stays open, blocking asyncio cleanup.
+        pending = getattr(self, "_pending_transport", None)
+        if pending is not None and pending is not self.transport:
+            try:
+                pending.disconnect()
             except Exception:
                 pass
         if self.db:

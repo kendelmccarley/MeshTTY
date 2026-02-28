@@ -113,6 +113,41 @@ class MessagesView(Widget):
     def on_text_message_received(self, event: TextMessageReceived) -> None:
         try:
             event.stop()
+            text = event.text or ""
+            is_dm = event.to_id != "^all"
+
+            # Slash-command handling: only for DMs starting with "/"
+            if is_dm and text.strip().startswith("/"):
+                handler = getattr(self.app, "command_handler", None)
+                if handler is not None:
+                    reply = handler.handle(text.strip())
+                    if reply is None:
+                        # Unknown command — silently drop
+                        return
+                    # Valid command: display the incoming command message
+                    prefix = self._resolve_incoming_prefix(event)
+                    view = self.query_one("#message-view", MessageView)
+                    view.append_message(prefix=prefix, text=text, rx_time=event.rx_time)
+                    self._write_message(
+                        event.from_id, event.to_id, event.channel,
+                        text, event.rx_time, False, event.packet_id, prefix,
+                    )
+                    # Send reply back to sender and display it
+                    transport = self.app.transport
+                    if transport and transport.is_connected:
+                        try:
+                            transport.send_text(reply, destination=event.from_id, channel=0)
+                        except Exception:
+                            pass
+                    now = int(time.time())
+                    view.append_message(prefix=prefix, text=reply, rx_time=now, is_mine=True)
+                    self._write_message(
+                        "me", event.from_id, 0,
+                        reply, now, True, None, prefix,
+                    )
+                    return
+
+            # Normal message handling
             prefix = self._resolve_incoming_prefix(event)
             self._last_prefix = prefix
             view = self.query_one("#message-view", MessageView)

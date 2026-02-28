@@ -12,7 +12,7 @@ from textual.widgets import Button, Input
 class ComposeBar(Widget):
     """Text input area with a Send button."""
 
-    class SendRequested(Message, bubble=False):
+    class SendRequested(Message):
         """Posted when the user submits a message."""
 
         def __init__(self, prefix: str, text: str) -> None:

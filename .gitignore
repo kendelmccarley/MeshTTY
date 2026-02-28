@@ -33,3 +33,6 @@ env/
 
 # Textual dev
 .textual/
+
+# Optional joke data file (not distributed with the repo)
+meshtty/data/shortjokes.csv

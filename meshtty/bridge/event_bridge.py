@@ -135,11 +135,18 @@ class EventBridge:
             log.error("_on_node_updated bridge error: %s", exc)
 
     def _on_connected(self, interface, topic=pub.AUTO_TOPIC) -> None:  # noqa: ANN001
-        # NOTE: self._app.transport is not yet set when this fires — the worker
-        # sets it after SerialInterface() returns.  The connection screen's
-        # _on_connect_success handles posting ConnectionEstablished with the
-        # real transport once the worker finishes.
-        log.debug("meshtastic.connection.established received")
+        # _pending_transport is stored on the app by _connect_worker before the
+        # blocking transport.connect() call.  Posting ConnectionEstablished here
+        # (when _waitConnected completes) lets the connection screen transition
+        # immediately without waiting for waitForConfig, which can take 5+ min
+        # on a busy 100-node network.
+        try:
+            log.debug("meshtastic.connection.established received")
+            pending = getattr(self._app, "_pending_transport", None)
+            if pending is not None:
+                self._app.post_message(ConnectionEstablished(pending))
+        except Exception as exc:
+            log.error("_on_connected bridge error: %s", exc)
 
     def _on_lost(self, interface, topic=pub.AUTO_TOPIC) -> None:  # noqa: ANN001
         try:

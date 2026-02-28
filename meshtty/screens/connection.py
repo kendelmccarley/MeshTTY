@@ -14,7 +14,6 @@ from textual.screen import Screen
 from textual.widgets import (
     Button,
     DataTable,
-    Footer,
     Header,
     Input,
     Label,
@@ -86,6 +85,7 @@ class ConnectionScreen(Screen):
         self._connecting = False
         self._download_dots = 0
         self._download_timer = None
+        self._already_transitioned = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -120,7 +120,6 @@ class ConnectionScreen(Screen):
             yield Label("", id="status-label")
             yield Label("", id="error-label")
             yield Button("Connect", id="connect-btn", variant="primary")
-        yield Footer()
 
     def on_mount(self) -> None:
         cfg = self.app.config
@@ -188,31 +187,31 @@ class ConnectionScreen(Screen):
 
     @work(thread=True, exclusive=True, name="connector")
     def _connect_worker(self, transport) -> None:
+        # Capture app reference NOW — ContextVar is valid at worker-thread start
+        # but transport.connect() can block 5-7 min on a busy network, by which
+        # point the ContextVar may be invalid (user quit/disconnected mid-connect).
+        # A direct object ref avoids the NoActiveAppError that caused failures.
+        app = self.app
+        app._pending_transport = transport
+        self._already_transitioned = False
         log.debug("Attempting connection: %s", transport)
         try:
             transport.connect()
             log.debug("Connection succeeded: %s", transport)
-            self.app.transport = transport
-            # Save to config
-            cfg = self.app.config
-            remember = self.query_one("#remember-switch", Switch).value
-            if remember:
-                if transport.transport_type == "serial":
-                    cfg.last_serial_port = transport._dev_path
-                    cfg.default_transport = "serial"
-                elif transport.transport_type == "tcp":
-                    cfg.last_tcp_host = transport._hostname
-                    cfg.last_tcp_port = transport._port
-                    cfg.default_transport = "tcp"
-                elif transport.transport_type == "ble":
-                    cfg.last_ble_address = transport._address
-                    cfg.default_transport = "ble"
-                from meshtty.config.settings import save_config
-                save_config(cfg)
-            self.app.call_from_thread(self._on_connect_success)
+            # If connection.established already fired (after _waitConnected, well
+            # before waitForConfig completes) _do_transition was already called.
+            # _finalize_from_worker is a no-op in that case.  On a quiet network
+            # both complete quickly; _finalize_from_worker handles that fallback.
+            try:
+                app.call_from_thread(self._finalize_from_worker)
+            except Exception:
+                pass
         except Exception as exc:
             log.exception("Transport connection failed: %s", transport)
-            self.app.call_from_thread(self._on_connect_failure, str(exc))
+            try:
+                app.call_from_thread(self._on_connect_failure, str(exc))
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Event handlers
@@ -267,6 +266,7 @@ class ConnectionScreen(Screen):
         if self._connecting:
             return
         self._connecting = True
+        self._already_transitioned = False
         self._download_dots = 0
         if self._download_timer is not None:
             self._download_timer.stop()
@@ -325,15 +325,63 @@ class ConnectionScreen(Screen):
 
         self._connect_worker(transport)
 
-    def _on_connect_success(self) -> None:
+    def on_connection_established(self, event: ConnectionEstablished) -> None:
+        """Fired by the bridge when meshtastic's _waitConnected completes.
+
+        This arrives well before transport.connect() returns on a busy network
+        (waitForConfig can add 5+ more minutes).  Transitioning here ends the
+        node-download loop and lets the user get to the main screen promptly.
+        """
+        if not self._connecting or self._already_transitioned:
+            return
+        try:
+            self._do_transition(event.transport)
+        except Exception:
+            pass
+
+    def _finalize_from_worker(self) -> None:
+        """Called on the UI thread after transport.connect() finally returns.
+
+        No-op when the bridge already triggered _do_transition.  Handles fast/
+        quiet networks where waitForConfig completes before connection.established
+        is processed.
+        """
+        if self._already_transitioned:
+            return
+        transport = getattr(self.app, "_pending_transport", None)
+        if transport:
+            self._do_transition(transport)
+
+    def _do_transition(self, transport) -> None:
+        """Transition to the main screen.  Always called on the UI thread."""
+        self._already_transitioned = True
         if self._download_timer is not None:
             self._download_timer.stop()
             self._download_timer = None
+        self._connecting = False
+        self.app.transport = transport
+        cfg = self.app.config
+        try:
+            remember = self.query_one("#remember-switch", Switch).value
+            if remember:
+                if transport.transport_type == "serial":
+                    cfg.last_serial_port = transport._dev_path
+                    cfg.default_transport = "serial"
+                elif transport.transport_type == "tcp":
+                    cfg.last_tcp_host = transport._hostname
+                    cfg.last_tcp_port = transport._port
+                    cfg.default_transport = "tcp"
+                elif transport.transport_type == "ble":
+                    cfg.last_ble_address = transport._address
+                    cfg.default_transport = "ble"
+                from meshtty.config.settings import save_config
+                save_config(cfg)
+        except Exception:
+            pass
         n = self._download_dots
         node_str = f"{n} node{'s' if n != 1 else ''}" if n else "nodes"
         self._set_status(f"Connected! ({node_str} loaded)")
-        self._connecting = False
-        self.app.post_message(ConnectionEstablished(self.app.transport))
+        self.app.post_message(ConnectionEstablished(transport))
         self.app.push_screen("main")
 
     def _on_connect_failure(self, reason: str) -> None:
