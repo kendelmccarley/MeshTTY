@@ -2,21 +2,32 @@
 
 from __future__ import annotations
 
+import textwrap
 from datetime import datetime
 
 from textual.app import ComposeResult
-from textual.scroll_view import ScrollView
 from textual.widget import Widget
 from textual.widgets import Label
 
+_WRAP_WIDTH = 80
 
-def _format_message(from_id: str, text: str, rx_time: int, is_mine: bool = False) -> str:
+
+def _format_message(prefix: str, text: str, rx_time: int, is_mine: bool = False) -> str:
     try:
         dt = datetime.fromtimestamp(rx_time).strftime("%H:%M")
     except (OSError, ValueError, OverflowError):
         dt = "--:--"
-    prefix = ">> " if is_mine else "   "
-    return f"{prefix}[{dt}] {from_id}: {text}"
+    indent = "  " if is_mine else ""
+    header = f"{indent}{dt} {prefix}: "
+    continuation = " " * len(header)
+    full = header + text
+    return textwrap.fill(
+        full,
+        width=_WRAP_WIDTH,
+        subsequent_indent=continuation,
+        break_long_words=True,
+        break_on_hyphens=False,
+    )
 
 
 class MessageView(Widget):
@@ -26,8 +37,12 @@ class MessageView(Widget):
     MessageView {
         height: 1fr;
         overflow-y: auto;
-        padding: 0 1;
+        padding: 0;
         background: $surface;
+    }
+    MessageView Label {
+        height: auto;
+        padding: 0;
     }
     MessageView .mine {
         color: $accent;
@@ -43,22 +58,24 @@ class MessageView(Widget):
 
     def append_message(
         self,
-        from_id: str,
+        prefix: str,
         text: str,
         rx_time: int,
         is_mine: bool = False,
     ) -> None:
-        formatted = _format_message(from_id, text, rx_time, is_mine)
+        formatted = _format_message(prefix, text, rx_time, is_mine)
         css_class = "mine" if is_mine else "theirs"
-        label = Label(formatted, classes=css_class)
+        label = Label(formatted, classes=css_class, markup=False)
         self.mount(label)
         self.scroll_end(animate=False)
 
     def load_messages(self, rows: list) -> None:
         """Bulk-load historical messages (called from worker result)."""
         for row in rows:
+            display_prefix = (row["display_prefix"] or "") if "display_prefix" in row.keys() else ""
+            prefix = display_prefix if display_prefix else row["from_id"]
             self.append_message(
-                from_id=row["from_id"],
+                prefix=prefix,
                 text=row["text"],
                 rx_time=row["rx_time"],
                 is_mine=bool(row["is_mine"]),

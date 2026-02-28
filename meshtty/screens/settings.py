@@ -61,10 +61,22 @@ class SettingsView(Widget):
         padding: 1 0;
         color: $success;
     }
+    #disconnect-btn {
+        margin-top: 1;
+        min-height: 3;
+        width: 20;
+    }
     """
 
     def compose(self) -> ComposeResult:
         cfg = self.app.config
+
+        yield Label("Connection", classes="section-header")
+
+        with Vertical(classes="row"):
+            yield Label("Disconnected", id="conn-status-label")
+
+        yield Button("Disconnect", id="disconnect-btn", variant="error", disabled=True)
 
         yield Label("Transport", classes="section-header")
 
@@ -119,8 +131,53 @@ class SettingsView(Widget):
         yield Button("Save", id="save-btn", variant="primary")
         yield Label("", id="save-status")
 
+    def on_mount(self) -> None:
+        self._refresh_connection_status()
+
+    def on_show(self) -> None:
+        self._refresh_connection_status()
+
+    def _refresh_connection_status(self) -> None:
+        try:
+            transport = self.app.transport
+            label = self.query_one("#conn-status-label", Label)
+            btn = self.query_one("#disconnect-btn", Button)
+            if transport and transport.is_connected:
+                nodes = len(transport.get_nodes())
+                my_node = transport.get_my_node()
+                bat = (my_node.get("deviceMetrics", {}) or {}).get("batteryLevel") if my_node else None
+                bat_str = f" | Bat: {bat}%" if bat is not None else ""
+                label.update(f"Connected via {transport} | {nodes} nodes{bat_str}")
+                btn.disabled = False
+            else:
+                label.update("Disconnected")
+                btn.disabled = True
+        except Exception:
+            pass
+
+    def on_connection_established(self, event) -> None:
+        try:
+            self._refresh_connection_status()
+        except Exception:
+            pass
+
+    def on_connection_lost(self, event) -> None:
+        try:
+            self._refresh_connection_status()
+        except Exception:
+            pass
+
+    def on_node_updated(self, event) -> None:
+        try:
+            self._refresh_connection_status()
+        except Exception:
+            pass
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "save-btn":
+        if event.button.id == "disconnect-btn":
+            event.stop()
+            self.app.action_disconnect()
+        elif event.button.id == "save-btn":
             event.stop()
             self._save()
 

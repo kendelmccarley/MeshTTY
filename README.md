@@ -1,9 +1,15 @@
-# MeshTTY — User Manual
+# MeshTTY
 
-MeshTTY is a terminal-based (TUI) client for Meshtastic LoRa mesh radio networks,
-designed to run on a Raspberry Pi or any Linux system with a terminal.  It is built
-with the Textual framework and communicates with a Meshtastic node over USB/serial,
-TCP/WiFi, or Bluetooth (BLE).
+> **PRE-ALPHA — work in progress.**
+> This release has known bugs, incomplete features, and UI rough edges.
+> It is published for development tracking only.  Expect breaking changes
+> between commits.  Do not rely on it for real mesh-radio operations.
+
+MeshTTY is a terminal-based (TUI) client for Meshtastic LoRa mesh radio
+networks, designed to run on a Raspberry Pi or any Linux system with a
+terminal.  It is built with the [Textual](https://textual.textualize.io/)
+framework and communicates with a Meshtastic node over USB/serial, TCP/WiFi,
+or Bluetooth (BLE).
 
 ---
 
@@ -14,41 +20,49 @@ TCP/WiFi, or Bluetooth (BLE).
 3. [Command-Line Flags](#3-command-line-flags)
 4. [Connection Screen](#4-connection-screen)
 5. [Main Screen](#5-main-screen)
-   - 5.1 [Status Bar](#51-status-bar)
-   - 5.2 [Messages Tab](#52-messages-tab)
-   - 5.3 [Nodes Tab](#53-nodes-tab)
+   - 5.1 [Messages Tab (F1)](#51-messages-tab-f1)
+   - 5.2 [Channels Tab (F2)](#52-channels-tab-f2)
+   - 5.3 [Nodes Tab (F3)](#53-nodes-tab-f3)
    - 5.4 [Node Detail Modal](#54-node-detail-modal)
-   - 5.5 [Settings Tab](#55-settings-tab)
+   - 5.5 [Settings Tab (F4)](#55-settings-tab-f4)
 6. [Keyboard Shortcuts](#6-keyboard-shortcuts)
 7. [Configuration File](#7-configuration-file)
 8. [Message & Node Database](#8-message--node-database)
 9. [Themes](#9-themes)
 10. [Debug Logging](#10-debug-logging)
 11. [Serial Port Permissions (Linux)](#11-serial-port-permissions-linux)
-12. [Troubleshooting](#12-troubleshooting)
+12. [Known Issues & Missing Features](#12-known-issues--missing-features)
+13. [Troubleshooting](#13-troubleshooting)
 
 ---
 
 ## 1. Installation
 
+Use the provided install script (recommended on Raspberry Pi):
+
 ```
+bash install.sh
+```
+
+Or install manually into a virtual environment:
+
+```
+python3 -m venv ~/.venv/meshtty
+source ~/.venv/meshtty/bin/activate
 pip install -e .
 ```
 
-Run this from the repository root (the directory containing `pyproject.toml`).
-This installs the `meshtty` command and all Python dependencies.
-
 **Dependencies installed automatically:**
 
-| Package       | Purpose                                        |
-|---------------|------------------------------------------------|
-| textual       | TUI framework (rendering, widgets, key bindings)|
-| meshtastic    | Meshtastic Python library (serial/TCP/BLE)     |
-| bleak         | Bluetooth BLE scanning                         |
-| pyserial      | Serial port enumeration and communication      |
-| pypubsub      | Event pub/sub (used internally by meshtastic)  |
-| protobuf      | Meshtastic protocol buffer serialization       |
-| anyio         | Async I/O support                              |
+| Package       | Purpose                                         |
+|---------------|-------------------------------------------------|
+| textual ≥ 8   | TUI framework (rendering, widgets, key bindings)|
+| meshtastic    | Meshtastic Python library (serial/TCP/BLE)      |
+| bleak         | Bluetooth BLE scanning                          |
+| pyserial      | Serial port enumeration and communication       |
+| pypubsub      | Event pub/sub (used internally by meshtastic)   |
+| protobuf      | Meshtastic protocol buffer serialization        |
+| anyio         | Async I/O support                               |
 
 Python 3.11 or newer is required.
 
@@ -56,83 +70,75 @@ Python 3.11 or newer is required.
 
 ## 2. Running MeshTTY
 
-After installation, either of the following will launch the app:
-
 ```
 meshtty
 ```
+
+or
 
 ```
 python -m meshtty.main
 ```
 
-The application starts on the **Connection Screen**.  Once connected to a node it
-switches automatically to the **Main Screen**.
+The app starts on the **Connection Screen**.  Once connected it switches
+automatically to the **Main Screen**.
 
 ---
 
 ## 3. Command-Line Flags
 
 ```
-meshtty [--debug] [-h]
+meshtty [--debug]
 ```
 
-| Flag      | Description                                                        |
-|-----------|--------------------------------------------------------------------|
-| `--debug` | Enable DEBUG-level logging for all loggers (see section 10).       |
-| `-h`      | Print help and exit.                                               |
-
-Example — run with debug logging and watch the log in another terminal:
-
-```
-meshtty --debug
-tail -f /tmp/meshtty.log
-```
+| Flag      | Description                                                  |
+|-----------|--------------------------------------------------------------|
+| `--debug` | Enable DEBUG-level logging to `/tmp/meshtty.log`.            |
+| `-h`      | Print help and exit.                                         |
 
 ---
 
 ## 4. Connection Screen
 
-This is the first screen shown on launch.  It lets you choose how to connect to
-your Meshtastic radio node.
+The first screen shown on launch.  Choose how to connect to your radio node.
 
 ### Tabs
-
-Three transport tabs are available.  The tab that was active when you last saved
-settings is pre-selected.
 
 #### Serial / USB
 
 - The app scans for serial ports whose USB vendor ID matches common Meshtastic
-  chips (Silicon Labs CP210x, WCH CH340/CH341, FTDI, Espressif USB-JTAG) and
-  lists them automatically in a table.
-- Click a row in the table to copy that port path into the input field, or type
-  the path manually (e.g. `/dev/ttyUSB0`, `/dev/ttyACM0`).
-- Click **Connect** to open the serial connection.
+  chips and lists them in a table.
+- Click a row to copy that port path into the input field, or type it manually
+  (e.g. `/dev/ttyUSB0`, `/dev/ttyACM0`).
+- Click **Connect**.
 
 #### TCP / WiFi
 
-- Enter the hostname or IP address of the node and the port number (default 4403).
+- Enter the hostname or IP address of the node and the port (default 4403).
 - Click **Connect**.
 
 #### Bluetooth (BLE)
 
-- Click **Scan for BLE Devices** to perform a 5-second BLE scan.  Devices are
-  identified by name ("meshtastic") or by the Meshtastic BLE service UUID.
-- Click a row in the table to copy the address into the input field, or type a
-  MAC address manually (e.g. `AA:BB:CC:DD:EE:FF`).
+- Click **Scan for BLE Devices** to perform a 5-second scan.
+- Click a row or enter a MAC address manually.
 - Click **Connect**.
 
 ### Remember this device
 
-The **Remember this device** switch (on by default) saves the connection details
-to the config file so the same transport and address are pre-filled on the next
-launch.
+The **Remember this device** switch (on by default) saves connection details
+so the same transport and address are pre-filled on the next launch.
 
-### Status and errors
+### Status messages
 
-- A status line shows progress ("Connecting…", "Found N serial device(s).", etc.).
+- A status line shows progress: "Connecting…", "Connected — downloading
+  nodes: …", "Download complete (N nodes) — waiting for radio confirmation…",
+  "Connected! (N nodes loaded)".
 - A red error line shows the failure reason if a connection attempt fails.
+
+> **Note:** On busy networks (many nodes), the download phase can take a
+> minute or more.  The 3-second idle timer may fire and show "download
+> complete" while nodes are still arriving.  Wait for "Connected!" to appear
+> before concluding the connection failed.
 
 ### Keyboard shortcuts (Connection Screen)
 
@@ -144,131 +150,143 @@ launch.
 
 ## 5. Main Screen
 
-After a successful connection the app switches to the Main Screen.  This screen
-has a **status bar** at the top, three **tabs** in the middle, and a **footer**
-at the bottom showing available key bindings.
+After a successful connection the app switches to the Main Screen, which has
+four tabs and a footer bar showing available key bindings.
 
-### 5.1 Status Bar
+The header bar has been intentionally removed to maximise usable display area.
 
-The status bar is always visible across all tabs.  It shows:
+---
 
-| Field       | Description                                                     |
-|-------------|-----------------------------------------------------------------|
-| ● Connected | Green indicator and transport description (e.g. "Serial (/dev/ttyUSB0)"). |
-| Ch: —       | Channel name (updated when channel info is received).           |
-| Nodes: N    | Count of mesh nodes known to the radio.                         |
-| Bat: N%     | Battery level of the local (your) node, if reported.            |
-| Disconnect  | Button — disconnects and returns to the Connection Screen.      |
+### 5.1 Messages Tab (F1)
 
-### 5.2 Messages Tab
+A unified, scrollable message history for all channels and direct messages,
+plus a compose bar at the bottom.
 
-Press **1** or click the "Messages" tab.
+#### Message display
 
-The Messages tab is divided into two panels:
-
-#### Channel Sidebar (left, 18 columns wide)
-
-Lists channels **Ch 0** through **Ch 7**.  Click a channel to switch to it.
-The channel you were on when you last disconnected is not saved between sessions;
-Ch 0 (or the channel set in Settings → Default channel) is shown on mount.
-
-#### Message History (right)
-
-Shows the last 200 messages for the selected channel, loaded from the local
-database on startup.  New messages received over the radio appear in real time.
-Sent messages appear immediately without waiting for acknowledgement.
-
-Messages are displayed as:
+Messages are displayed in a fixed-80-column terminal style:
 
 ```
-[HH:MM:SS] <node-id>: message text
+HH:MM prefix: message text
 ```
 
-Your own messages are visually distinguished from received messages.
+- **Incoming broadcasts** — displayed flush with the left margin, labelled
+  with the channel name (e.g. `Primary`, `LongFast`).
+- **Incoming direct messages** — labelled with the sender's short name.
+- **Outgoing messages** — indented by two spaces.
+- Lines longer than 80 characters wrap to the next line, aligned under the
+  message text.
 
-#### Compose Bar (bottom of right panel)
+#### Compose bar
 
-Type a message in the text input and press **Enter** or click **Send** to
-broadcast it on the currently selected channel.  The input is cleared after
-sending and focus returns to it automatically.
+The input field is pre-filled with the last active prefix (e.g. `Primary: `).
+You can type and send as-is, or edit the prefix to target a different channel
+or a specific node's short name.  Format:
 
-### 5.3 Nodes Tab
+```
+prefix: your message text
+```
 
-Press **2** or click the "Nodes" tab.
+- If the prefix matches a configured channel name → sent as a broadcast on
+  that channel.
+- If the prefix matches a node short name → sent as a direct message to that
+  node.
+- Press **Enter** or click **Send** to transmit.
 
-Displays a table of all mesh nodes known to the radio.  The table updates in
-real time as node updates, position packets, and telemetry packets are received.
+#### Scrolling
+
+- **Up / Down arrows** scroll the message history one line at a time.
+- **PageUp / PageDown** scroll a full screen at a time.
+- Scrolling works regardless of whether focus is on the message area or the
+  compose input.
+
+#### History
+
+The 200 most recent messages (across all channels and DMs) are loaded from
+the local database on startup.
+
+---
+
+### 5.2 Channels Tab (F2)
+
+Lists all channels configured on the connected radio.
+
+- Click a channel name to set it as the compose prefix in the Messages tab.
+  The app switches back to Messages automatically.
+- The list is refreshed each time the tab is shown.
+
+---
+
+### 5.3 Nodes Tab (F3)
+
+A live table of all mesh nodes known to the radio.  Updates in real time as
+position, telemetry, and node-info packets are received.
 
 | Column     | Description                                      |
 |------------|--------------------------------------------------|
 | Short      | Node short name (4-character callsign).          |
 | Long Name  | Node long name.                                  |
-| SNR        | Last received signal-to-noise ratio in dB.       |
+| SNR        | Last received signal-to-noise ratio (dB).        |
 | Last Heard | Time of the last packet heard (HH:MM:SS, local). |
 | Battery    | Reported battery level (%).                      |
 | Position   | GPS coordinates (lat, lon) to 4 decimal places.  |
-| HW Model   | Hardware model string reported by the node.      |
+| HW Model   | Hardware model string.                           |
 
-Press **Ctrl+R** to force a refresh of the node table from the radio.
+Press **Ctrl+R** to force a refresh from the radio.
 
-Click any row to open the **Node Detail Modal** for that node.
+Click any row to open the **Node Detail Modal**.
+
+---
 
 ### 5.4 Node Detail Modal
 
-Opens as an overlay when you click a node row.  Shows all available information
-for that node:
+Overlay shown when you click a node row.  Displays:
 
-**Identity**
-- Node ID (hex string, e.g. `!abcd1234`)
-- Short name
-- Long name
-- Hardware model
-
-**Signal**
-- Last SNR (dB)
-- Last heard timestamp (YYYY-MM-DD HH:MM:SS, local time)
-
-**Power**
-- Battery level (%)
-
-**Position**
+- Node ID, short name, long name, hardware model
+- Last SNR, last heard timestamp
+- Battery level
 - Latitude, longitude, altitude
 
-Fields show `—` when the value has not been received.
+Fields show `—` when no value has been received.  Close with **Close**,
+**Escape**, or **Q**.
 
-Close the modal with the **Close** button, the **Escape** key, or **Q**.
+---
 
-### 5.5 Settings Tab
+### 5.5 Settings Tab (F4)
 
-Press **3** or click the "Settings" tab.
+#### Connection section (top)
 
-Change any setting and click **Save** to apply.  A "Settings saved." confirmation
-appears below the button.  Most settings take effect on the next connection; the
-**Theme** setting takes effect immediately without restarting.
+Shows the current connection state and provides a **Disconnect** button that
+returns to the Connection Screen.  The status line includes the transport
+description, the number of known nodes, and the local node's battery level
+(when available).
 
 #### Transport section
 
-| Field                | Description                                                   |
-|----------------------|---------------------------------------------------------------|
-| Default transport    | Which tab is pre-selected on the Connection Screen (Serial / TCP / BLE). |
-| Serial port          | Last-used serial device path, pre-filled on the Connection Screen. |
-| TCP hostname         | Last-used TCP hostname or IP.                                 |
-| TCP port             | Last-used TCP port (default 4403).                            |
-| BLE address          | Last-used BLE MAC address.                                    |
-| Auto-connect on launch | Not yet implemented in the connection flow; saved but unused. |
+| Field                  | Description                                                   |
+|------------------------|---------------------------------------------------------------|
+| Default transport      | Tab pre-selected on the Connection Screen.                    |
+| Serial port            | Last-used serial device path.                                 |
+| TCP hostname           | Last-used TCP hostname or IP.                                 |
+| TCP port               | Last-used TCP port (default 4403).                            |
+| BLE address            | Last-used BLE MAC address.                                    |
+| Auto-connect on launch | Saved but not yet active in the connection flow.              |
 
 #### Display section
 
-| Field               | Description                                                    |
-|---------------------|----------------------------------------------------------------|
-| Show short node names | When enabled, the Nodes table uses the 4-character short name as the primary identifier. |
-| Theme               | UI color theme.  Applied immediately on Save (see section 9). |
+| Field                  | Description                                                   |
+|------------------------|---------------------------------------------------------------|
+| Show short node names  | Use 4-character short names as the primary identifier in the Nodes table. |
+| Theme                  | UI colour theme — applied immediately on Save.                |
 
 #### Messaging section
 
-| Field           | Description                                                        |
-|-----------------|--------------------------------------------------------------------|
-| Default channel | Channel index (0–7) shown when the Messages tab first opens.       |
+| Field           | Description                                              |
+|-----------------|----------------------------------------------------------|
+| Default channel | Channel index shown in Settings reference (0–7).         |
+
+Click **Save** to apply.  The **Theme** setting takes effect immediately;
+other settings apply on the next connection.
 
 ---
 
@@ -282,14 +300,17 @@ appears below the button.  Most settings take effect on the next connection; the
 
 ### Main Screen
 
-| Key    | Action                              |
-|--------|-------------------------------------|
-| 1      | Switch to Messages tab              |
-| 2      | Switch to Nodes tab                 |
-| 3      | Switch to Settings tab              |
-| Ctrl+R | Refresh node table from radio       |
-| Ctrl+D | Disconnect and return to Connection Screen |
-| Ctrl+Q | Quit                                |
+| Key      | Action                                        |
+|----------|-----------------------------------------------|
+| F1       | Switch to Messages tab                        |
+| F2       | Switch to Channels tab                        |
+| F3       | Switch to Nodes tab                           |
+| F4       | Switch to Settings tab                        |
+| ↑ / ↓   | Scroll message history up / down one line     |
+| PgUp/PgDn| Scroll message history up / down one screen   |
+| Ctrl+R   | Refresh node table from radio                 |
+| Ctrl+D   | Disconnect and return to Connection Screen    |
+| Ctrl+Q   | Quit                                          |
 
 ### Node Detail Modal
 
@@ -304,18 +325,14 @@ appears below the button.  Most settings take effect on the next connection; the
 
 **Location:** `~/.config/meshtty/config.json`
 
-The file is created automatically on first run.  You can edit it with any text
-editor while MeshTTY is not running.  The app reads it on startup; changes made
-while the app is running have no effect until the next launch (except for theme,
-which can be changed from the Settings tab at runtime).
-
-### Full example
+Created automatically on first run.  Edit with any text editor while MeshTTY
+is not running.
 
 ```json
 {
   "default_transport": "serial",
   "last_serial_port": "/dev/ttyUSB0",
-  "last_tcp_host": "192.168.1.100",
+  "last_tcp_host": "",
   "last_tcp_port": 4403,
   "last_ble_address": "",
   "auto_connect": true,
@@ -327,70 +344,68 @@ which can be changed from the Settings tab at runtime).
 }
 ```
 
-### Field reference
-
-| Key                    | Type    | Default                       | Description                         |
-|------------------------|---------|-------------------------------|-------------------------------------|
-| `default_transport`    | string  | `"serial"`                    | `"serial"`, `"tcp"`, or `"ble"`.   |
-| `last_serial_port`     | string  | `""`                          | Serial device path.                 |
-| `last_tcp_host`        | string  | `""`                          | TCP hostname or IP.                 |
-| `last_tcp_port`        | integer | `4403`                        | TCP port number.                    |
-| `last_ble_address`     | string  | `""`                          | BLE MAC address.                    |
-| `auto_connect`         | boolean | `true`                        | Saved by the Settings screen; not yet active in the connection flow. |
-| `log_level`            | string  | `"WARNING"`                   | Python logging level for normal operation: `"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"`. Overridden to `"DEBUG"` when `--debug` is passed on the command line. |
-| `db_path`              | string  | `~/.config/meshtty/messages.db` | Path to the SQLite message database. |
-| `default_channel`      | integer | `0`                           | Channel shown on Messages tab mount (0–7). |
-| `node_short_name_display` | boolean | `true`                     | Use short names in the Nodes table. |
-| `theme`                | string  | `"meshtty-multicolor"`        | UI theme name (see section 9).      |
+| Key                     | Type    | Default                         | Description                         |
+|-------------------------|---------|---------------------------------|-------------------------------------|
+| `default_transport`     | string  | `"serial"`                      | `"serial"`, `"tcp"`, or `"ble"`.   |
+| `last_serial_port`      | string  | `""`                            | Serial device path.                 |
+| `last_tcp_host`         | string  | `""`                            | TCP hostname or IP.                 |
+| `last_tcp_port`         | integer | `4403`                          | TCP port number.                    |
+| `last_ble_address`      | string  | `""`                            | BLE MAC address.                    |
+| `auto_connect`          | boolean | `true`                          | Saved but not yet used at startup.  |
+| `log_level`             | string  | `"WARNING"`                     | `"DEBUG"`, `"INFO"`, `"WARNING"`, or `"ERROR"`. |
+| `db_path`               | string  | `~/.config/meshtty/messages.db` | Path to the SQLite database.        |
+| `default_channel`       | integer | `0`                             | Messaging default channel (0–7).   |
+| `node_short_name_display` | boolean | `true`                        | Use short names in the Nodes table. |
+| `theme`                 | string  | `"meshtty-multicolor"`          | UI theme (see section 9).           |
 
 ---
 
 ## 8. Message & Node Database
 
-**Location:** `~/.config/meshtty/messages.db` (configurable via `db_path`)
+**Location:** `~/.config/meshtty/messages.db`
 
-MeshTTY stores messages and node data in a local SQLite database.  The file is
-created automatically.  You can query it with any SQLite tool
-(e.g. `sqlite3 ~/.config/meshtty/messages.db`).
+SQLite database created automatically.  Query with any SQLite tool.
 
 ### `messages` table
 
-| Column     | Type    | Description                                        |
-|------------|---------|----------------------------------------------------|
-| `id`       | INTEGER | Auto-increment primary key.                        |
-| `packet_id`| TEXT    | Meshtastic packet ID (may be NULL for sent messages). |
-| `from_id`  | TEXT    | Sender node ID string (e.g. `!abcd1234`).          |
-| `to_id`    | TEXT    | Recipient node ID or `^all` for broadcast.         |
-| `channel`  | INTEGER | Channel index (0–7).                               |
-| `text`     | TEXT    | Message text.                                      |
-| `rx_time`  | INTEGER | Unix timestamp (seconds).                          |
-| `is_mine`  | INTEGER | `1` if sent by this device, `0` if received.       |
+| Column           | Type    | Description                                        |
+|------------------|---------|----------------------------------------------------|
+| `id`             | INTEGER | Auto-increment primary key.                        |
+| `packet_id`      | TEXT    | Meshtastic packet ID (NULL for sent messages).     |
+| `from_id`        | TEXT    | Sender node ID string (e.g. `!abcd1234`).          |
+| `to_id`          | TEXT    | Recipient node ID or `^all` for broadcast.         |
+| `channel`        | INTEGER | Channel index (0–7).                               |
+| `text`           | TEXT    | Message text.                                      |
+| `rx_time`        | INTEGER | Unix timestamp (seconds).                          |
+| `is_mine`        | INTEGER | `1` if sent by this device, `0` if received.       |
+| `display_prefix` | TEXT    | Human-readable prefix stored at send/receive time. |
 
-The Messages tab loads the 200 most recent messages per channel from this table
-on startup and whenever you switch channels.
+The history view loads the 200 most recent messages (all channels combined)
+from this table on startup.
 
 ### `nodes` table
 
-| Column      | Type    | Description                                   |
-|-------------|---------|-----------------------------------------------|
-| `node_id`   | TEXT    | Primary key.  Node ID string.                 |
-| `short_name`| TEXT    | 4-character callsign.                         |
-| `long_name` | TEXT    | Full node name.                               |
-| `hw_model`  | TEXT    | Hardware model string.                        |
-| `last_snr`  | REAL    | Last signal-to-noise ratio (dB).              |
-| `last_lat`  | REAL    | Last latitude.                                |
-| `last_lon`  | REAL    | Last longitude.                               |
-| `last_alt`  | INTEGER | Last altitude (metres).                       |
-| `battery`   | INTEGER | Battery level (%).                            |
-| `last_heard`| INTEGER | Unix timestamp of last received packet.       |
-| `updated_at`| INTEGER | Unix timestamp of last database write.        |
+| Column       | Type    | Description                                   |
+|--------------|---------|-----------------------------------------------|
+| `node_id`    | TEXT    | Primary key.  Node ID string.                 |
+| `short_name` | TEXT    | 4-character callsign.                         |
+| `long_name`  | TEXT    | Full node name.                               |
+| `hw_model`   | TEXT    | Hardware model string.                        |
+| `last_snr`   | REAL    | Last signal-to-noise ratio (dB).              |
+| `last_lat`   | REAL    | Last latitude.                                |
+| `last_lon`   | REAL    | Last longitude.                               |
+| `last_alt`   | INTEGER | Last altitude (metres).                       |
+| `battery`    | INTEGER | Battery level (%).                            |
+| `last_heard` | INTEGER | Unix timestamp of last received packet.       |
+| `updated_at` | INTEGER | Unix timestamp of last database write.        |
 
 Useful queries:
 
 ```sql
--- All messages on channel 0, newest first
-SELECT datetime(rx_time, 'unixepoch', 'localtime') AS time, from_id, text
-FROM messages WHERE channel = 0 ORDER BY rx_time DESC LIMIT 50;
+-- All messages, newest first
+SELECT datetime(rx_time,'unixepoch','localtime') AS time,
+       display_prefix, text
+FROM messages ORDER BY rx_time DESC LIMIT 50;
 
 -- All known nodes
 SELECT node_id, short_name, long_name, battery, last_snr FROM nodes;
@@ -400,127 +415,151 @@ SELECT node_id, short_name, long_name, battery, last_snr FROM nodes;
 
 ## 9. Themes
 
-MeshTTY ships with three built-in themes selectable from the Settings tab.
-The theme is applied instantly when you click Save — no restart required.
-The selected theme is saved to the config file and restored on the next launch.
+Three built-in themes, selectable from Settings → Theme.  Applied immediately
+on Save; persisted in config.
 
-| Config value           | Settings label  | Appearance                                        |
-|------------------------|-----------------|---------------------------------------------------|
-| `meshtty-multicolor`   | Multicolor      | Dark navy/purple background, blue/purple/pink accents. Default. |
-| `meshtty-phosphor`     | Green Phosphor  | Black background, classic green-on-black CRT look. |
-| `meshtty-bw`           | Black & White   | Pure black background, white/grey monochrome.     |
-
-To set a theme without launching the app, edit `~/.config/meshtty/config.json`
-and set the `"theme"` key to one of the three config values above.  If an
-unrecognised value is found on startup the app silently falls back to
-`meshtty-multicolor`.
+| Config value         | Label           | Appearance                                        |
+|----------------------|-----------------|---------------------------------------------------|
+| `meshtty-multicolor` | Multicolor      | Dark navy/purple background, blue/purple/pink accents. Default. |
+| `meshtty-phosphor`   | Green Phosphor  | Black background, green-on-black CRT look.        |
+| `meshtty-bw`         | Black & White   | Black background, white/grey monochrome.          |
 
 ---
 
 ## 10. Debug Logging
 
-Pass `--debug` on the command line to enable DEBUG-level logging:
-
 ```
 meshtty --debug
-```
-
-All log output (from MeshTTY and from the `meshtastic` Python library) is written
-to:
-
-```
-/tmp/meshtty.log
-```
-
-Watch it in real time from a second terminal:
-
-```
 tail -f /tmp/meshtty.log
 ```
 
-In normal operation (without `--debug`) the log level is controlled by the
-`log_level` field in the config file and defaults to `WARNING`.  Only warnings
-and errors are written to the log file.
+In normal operation the log level is controlled by `log_level` in config
+(default `"WARNING"`).  Only warnings and errors are written to the log file.
 
-### What is logged at DEBUG level
+### Common errors in the log
 
-- Every connection attempt, including the transport type and address/port
-- Full Python exception tracebacks when a connection fails (previously only the
-  error message string was shown in the UI)
-- Internal meshtastic library events: serial framing, protocol handshake, node
-  sync, packet receipt
-- EventBridge subscription and unsubscription
-- Theme activation on startup
-
-### Interpreting common errors
-
-| Error in log                                          | Likely cause                                        |
-|-------------------------------------------------------|-----------------------------------------------------|
-| `PermissionError: [Errno 13] Permission denied: '/dev/ttyUSB0'` | User not in the `dialout` group — see section 11. |
-| `serial.serialutil.SerialException: could not open port` | Port path wrong, device not plugged in, or driver not loaded. |
-| `ConnectionRefusedError`                              | TCP host/port wrong or node not reachable.          |
-| `meshtastic.mesh_interface: Timeout waiting for ...`  | Node is powered on and connected but not responding to handshake — try unplugging and reconnecting the USB cable. |
+| Error                                                           | Likely cause                                      |
+|-----------------------------------------------------------------|---------------------------------------------------|
+| `PermissionError: [Errno 13] ... '/dev/ttyUSB0'`               | User not in the `dialout` group — see section 11. |
+| `serial.serialutil.SerialException: could not open port`       | Port path wrong or device not plugged in.         |
+| `ConnectionRefusedError`                                        | TCP host/port wrong or node unreachable.          |
+| `_waitConnected timed out but N nodes present`                 | Noisy serial stream; the transport forces connection and proceeds. |
+| `waitForConfig timed out but myInfo and N nodes present`       | Radio config incomplete; channels/localConfig may be missing. |
 
 ---
 
 ## 11. Serial Port Permissions (Linux)
 
-On Linux, serial ports (`/dev/ttyUSB*`, `/dev/ttyACM*`) are owned by the
-`dialout` group.  If you see a `PermissionError` in the log when connecting via
-USB, add your user to the group:
-
 ```
 sudo usermod -aG dialout $USER
 ```
 
-Log out and back in (or reboot) for the change to take effect.  Verify with:
+Log out and back in.  Verify:
 
 ```
-groups
+groups   # output should include "dialout"
 ```
-
-The output should include `dialout`.
 
 ---
 
-## 12. Troubleshooting
+## 12. Known Issues & Missing Features
 
-### Serial device is detected but connection fails
+This is a pre-alpha release.  The following are known to be broken or absent:
+
+### Confirmed bugs
+
+- **Connection screen loop on busy networks** — On networks with many active
+  nodes, the 3-second idle timer fires and shows "download complete" before
+  all nodes have arrived.  More nodes then arrive, resetting the timer.  The
+  loop eventually resolves once the radio completes its handshake.  A second
+  connection attempt always succeeds.
+- **F-key tab switching may flash on first press** — Pressing F1–F4 to switch
+  tabs can visually flash on some terminal emulators before settling on the
+  correct tab.  Pressing the key a second time reliably switches.
+- **Occasional `NoActiveAppError` on connect** — Seen in logs when the
+  meshtastic library's internal thread tries to access app state during the
+  connection handshake.  Transient; does not affect operation after connection
+  completes.
+- **`display_prefix` missing from old database rows** — Messages stored before
+  this version have an empty `display_prefix` column; they fall back to
+  displaying the raw `from_id` node string.
+
+### Not yet implemented
+
+- **Auto-connect on launch** — The `auto_connect` config key is saved but the
+  connection screen does not yet auto-connect on startup.
+- **Direct message sending** — The compose bar prefix routing is wired up but
+  has not been tested against a live radio with multiple nodes.
+- **Channel switching confirmation** — Clicking a channel in the Channels tab
+  switches the compose prefix but does not visually confirm which channel is
+  active.
+- **Message acknowledgement display** — Sent messages appear immediately in
+  the history but there is no indication of whether the radio acknowledged
+  delivery.
+- **Persistent compose prefix** — The compose bar prefix resets to the first
+  channel on each session start and on each received message.
+- **BLE transport** — Largely untested.
+- **Node position on map** — No map view.
+- **Channel creation / management** — Read-only channel display only.
+- **Firmware version / radio config display** — Not shown anywhere.
+- **Notification / alert on new message** — No audio or visual alert when a
+  new message arrives on a non-active tab.
+
+---
+
+## 13. Troubleshooting
+
+### Connection loops or hangs during node download
+
+Run with `--debug` and watch the log.  If you see:
+
+```
+_waitConnected timed out but N nodes present — forcing connected state
+```
+
+or
+
+```
+waitForConfig timed out but myInfo and N nodes present — proceeding without full config
+```
+
+the transport timed out waiting for the radio's config exchange on a busy
+network.  The connection will complete anyway.  If the app appears stuck,
+quit and reconnect — the second attempt typically succeeds immediately because
+the radio's config is already cached.
+
+### Serial device detected but connection fails
 
 1. Run with `--debug` and check `/tmp/meshtty.log` for the full traceback.
 2. Confirm permissions (section 11).
-3. Try unplugging and re-plugging the USB cable — the node may need a reset.
-4. Confirm the device path:  `ls -l /dev/ttyUSB* /dev/ttyACM*`
-5. Test with the meshtastic CLI directly to rule out a hardware or firmware issue:
-   `meshtastic --port /dev/ttyUSB0 --info`
+3. Try unplugging and re-plugging the USB cable.
+4. Test with the meshtastic CLI: `meshtastic --port /dev/ttyUSB0 --info`
 
-### No serial devices appear in the auto-scan list
+### No serial devices in the auto-scan list
 
 The scanner filters by USB vendor ID.  Supported chips:
 
-| Chip              | USB VID |
-|-------------------|---------|
-| Silicon Labs CP210x | 10C4  |
-| WCH CH340 / CH341 | 1A86    |
-| FTDI              | 0403    |
-| Espressif USB-JTAG | 303A   |
+| Chip                | USB VID |
+|---------------------|---------|
+| Silicon Labs CP210x | 10C4    |
+| WCH CH340 / CH341   | 1A86    |
+| FTDI                | 0403    |
+| Espressif USB-JTAG  | 303A    |
 
 If your adapter uses a different chip, enter the port path manually.
 
 ### BLE scan finds no devices
 
-- Ensure the Meshtastic node has BLE enabled in its firmware settings.
-- Ensure the host system has a working Bluetooth adapter (`hciconfig`).
-- Try increasing the scan timeout by connecting manually via the address input.
+- Ensure the node has BLE enabled in its firmware settings.
+- Ensure the host has a working Bluetooth adapter (`hciconfig`).
 
-### Config file is ignored or reset
+### Config file ignored or reset
 
-The app silently falls back to defaults if `config.json` contains invalid JSON
-or an unexpected value type.  Open the file in a text editor and verify it is
-valid JSON (`python3 -m json.tool ~/.config/meshtty/config.json`).
+Verify it is valid JSON:
 
-### Old "dark" theme value in config
+```
+python3 -m json.tool ~/.config/meshtty/config.json
+```
 
-If you have `"theme": "dark"` or any unrecognised theme name in your config
-(left over from an earlier version), the app automatically resets it to
-`meshtty-multicolor` at startup without crashing.
+If `"theme"` contains an unrecognised value, the app silently resets it to
+`meshtty-multicolor`.

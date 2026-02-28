@@ -43,6 +43,13 @@ class Database:
                     updated_at INTEGER
                 );
             """)
+            try:
+                self._conn.execute(
+                    "ALTER TABLE messages ADD COLUMN display_prefix TEXT DEFAULT ''"
+                )
+                self._conn.commit()
+            except Exception:
+                pass  # column already exists
 
     def insert_message(
         self,
@@ -53,21 +60,22 @@ class Database:
         rx_time: int,
         is_mine: bool = False,
         packet_id: str | None = None,
+        display_prefix: str = "",
     ) -> None:
         with self._lock:
             self._conn.execute(
                 "INSERT INTO messages "
-                "(packet_id, from_id, to_id, channel, text, rx_time, is_mine) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (packet_id, from_id, to_id, channel, text, rx_time, int(is_mine)),
+                "(packet_id, from_id, to_id, channel, text, rx_time, is_mine, display_prefix) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (packet_id, from_id, to_id, channel, text, rx_time, int(is_mine), display_prefix),
             )
             self._conn.commit()
 
-    def get_messages(self, channel: int = 0, limit: int = 200) -> list:
+    def get_messages(self, limit: int = 200) -> list:
         with self._lock:
             cur = self._conn.execute(
-                "SELECT * FROM messages WHERE channel=? ORDER BY rx_time DESC LIMIT ?",
-                (channel, limit),
+                "SELECT * FROM messages ORDER BY rx_time DESC LIMIT ?",
+                (limit,),
             )
             return list(reversed(cur.fetchall()))
 

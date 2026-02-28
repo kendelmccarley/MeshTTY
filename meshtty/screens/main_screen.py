@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Footer, Header, TabbedContent, TabPane
+from textual.widgets import Footer, TabbedContent, TabPane
 
 from meshtty.messages.app_messages import (
     ConnectionEstablished,
@@ -14,12 +13,11 @@ from meshtty.messages.app_messages import (
     NodeUpdated,
     TextMessageReceived,
 )
+from meshtty.screens.channels import ChannelView
 from meshtty.screens.messages import MessagesView
 from meshtty.screens.node_detail import NodeDetailModal
 from meshtty.screens.nodes import NodeListView
 from meshtty.screens.settings import SettingsView
-from meshtty.widgets.node_table import NodeTable
-from meshtty.widgets.status_bar import ConnectionStatusBar
 
 
 class MainScreen(Screen):
@@ -29,28 +27,26 @@ class MainScreen(Screen):
         Binding("ctrl+q", "app.quit", "Quit"),
         Binding("ctrl+d", "app.disconnect", "Disconnect"),
         Binding("ctrl+r", "refresh_nodes", "Refresh"),
-        Binding("1", "switch_tab('tab-messages')", "Messages"),
-        Binding("2", "switch_tab('tab-nodes')", "Nodes"),
-        Binding("3", "switch_tab('tab-settings')", "Settings"),
+        Binding("f1", "switch_tab('tab-messages')", "Messages", priority=True),
+        Binding("f2", "switch_tab('tab-channels')", "Channels", priority=True),
+        Binding("f3", "switch_tab('tab-nodes')", "Nodes", priority=True),
+        Binding("f4", "switch_tab('tab-settings')", "Settings", priority=True),
     ]
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
-        yield ConnectionStatusBar(id="status-bar")
         with TabbedContent(id="main-tabs", initial="tab-messages"):
-            with TabPane("Messages [1]", id="tab-messages"):
+            with TabPane("Messages [F1]", id="tab-messages"):
                 yield MessagesView(id="messages-view")
-            with TabPane("Nodes [2]", id="tab-nodes"):
+            with TabPane("Channels [F2]", id="tab-channels"):
+                yield ChannelView(id="channels-view")
+            with TabPane("Nodes [F3]", id="tab-nodes"):
                 yield NodeListView(id="nodes-view")
-            with TabPane("Settings [3]", id="tab-settings"):
+            with TabPane("Settings [F4]", id="tab-settings"):
                 yield SettingsView(id="settings-view")
         yield Footer()
 
     def on_mount(self) -> None:
-        # If already connected when screen mounts, reflect that state
-        transport = self.app.transport
-        if transport and transport.is_connected:
-            self._update_status_connected()
+        pass
 
     # ------------------------------------------------------------------
     # App message handlers (routed from MeshTTYApp)
@@ -58,16 +54,17 @@ class MainScreen(Screen):
 
     def on_connection_established(self, event: ConnectionEstablished) -> None:
         try:
-            self._update_status_connected()
+            self.query_one("#settings-view", SettingsView).post_message(event)
+        except Exception:
+            pass
+        try:
+            self.query_one("#channels-view", ChannelView).post_message(event)
         except Exception:
             pass
 
     def on_connection_lost(self, event: ConnectionLost) -> None:
         try:
-            bar = self.query_one("#status-bar", ConnectionStatusBar)
-            bar.connection_state = "disconnected"
-            bar.channel_name = "—"
-            bar.battery_level = None
+            self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
             pass
 
@@ -79,10 +76,7 @@ class MainScreen(Screen):
 
     def on_node_updated(self, event: NodeUpdated) -> None:
         try:
-            transport = self.app.transport
-            if transport:
-                bar = self.query_one("#status-bar", ConnectionStatusBar)
-                bar.node_count = len(transport.get_nodes())
+            self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
             pass
         try:
@@ -127,7 +121,20 @@ class MainScreen(Screen):
     # ------------------------------------------------------------------
 
     def action_switch_tab(self, tab_id: str) -> None:
-        self.query_one("#main-tabs", TabbedContent).active = tab_id
+        tc = self.query_one("#main-tabs", TabbedContent)
+        tc.active = tab_id
+        # Drive focus into the newly visible pane so it's immediately usable
+        try:
+            if tab_id == "tab-messages":
+                self.query_one("#compose-input").focus()
+            elif tab_id == "tab-channels":
+                self.query_one("#channel-list").focus()
+            elif tab_id == "tab-nodes":
+                self.query_one("DataTable").focus()
+            elif tab_id == "tab-settings":
+                self.query_one("#settings-view").focus()
+        except Exception:
+            pass
 
     def action_refresh_nodes(self) -> None:
         try:
@@ -135,23 +142,3 @@ class MainScreen(Screen):
             nodes_view._load_nodes()
         except Exception:
             pass
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _update_status_connected(self) -> None:
-        transport = self.app.transport
-        if not transport:
-            return
-        bar = self.query_one("#status-bar", ConnectionStatusBar)
-        bar.connection_state = "connected"
-        # Try to get local node info for battery
-        try:
-            my_node = transport.get_my_node()
-            metrics = my_node.get("deviceMetrics", {}) if my_node else {}
-            bat = metrics.get("batteryLevel")
-            bar.battery_level = bat
-        except Exception:
-            pass
-        bar.node_count = len(transport.get_nodes())
