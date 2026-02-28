@@ -90,13 +90,14 @@ automatically to the **Main Screen**.
 ## 3. Command-Line Flags
 
 ```
-meshtty [--debug] [--bot]
+meshtty [--debug] [--bot] [--log]
 ```
 
 | Flag      | Description                                                  |
 |-----------|--------------------------------------------------------------|
 | `--debug` | Enable DEBUG-level logging to `/tmp/meshtty.log`.            |
 | `--bot`   | Enable the DM slash-command bot (see section 5.6).           |
+| `--log`   | Log all inbound and outbound messages to `/tmp/meshtty-messages.log`. |
 | `-h`      | Print help and exit.                                         |
 
 ---

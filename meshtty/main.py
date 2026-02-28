@@ -16,6 +16,7 @@ from textual.widgets import Label
 from meshtty.bridge.event_bridge import EventBridge
 from meshtty.commands.command_handler import CommandHandler
 from meshtty.config.settings import AppConfig, load_config
+from meshtty.message_log import MESSAGE_LOG_FILE, MessageLog
 from meshtty.themes import ALL_THEMES
 from meshtty.db.database import Database
 from meshtty.messages.app_messages import (
@@ -74,11 +75,13 @@ class MeshTTYApp(App):
     # App-level state — accessible from all screens via self.app.*
     _debug: bool = False  # set by main() before run()
     _bot: bool = False    # set by main() before run()
+    _log: bool = False    # set by main() before run()
     transport: TransportManager | None = None
     config: AppConfig = None  # type: ignore[assignment]
     db: Database = None       # type: ignore[assignment]
     bridge: EventBridge = None  # type: ignore[assignment]
     command_handler: CommandHandler | None = None
+    message_log: MessageLog | None = None
 
     def on_mount(self) -> None:
         self.config = load_config()
@@ -89,6 +92,8 @@ class MeshTTYApp(App):
         self.bridge = EventBridge(self)
         if self._bot:
             self.command_handler = CommandHandler()
+        if self._log:
+            self.message_log = MessageLog()
 
         for t in ALL_THEMES:
             self.register_theme(t)
@@ -214,16 +219,24 @@ def main() -> None:
         action="store_true",
         help="Enable DM slash-command bot (responds to /HELP, /JOKE, /INFO, etc.)",
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help=f"Log all inbound and outbound messages to {MESSAGE_LOG_FILE}",
+    )
     args = parser.parse_args()
 
     if args.debug:
         print(f"Debug logging enabled → {LOG_FILE}", file=sys.stderr)
     if args.bot:
         print("Bot mode enabled — responding to DM slash commands", file=sys.stderr)
+    if args.log:
+        print(f"Message logging enabled → {MESSAGE_LOG_FILE}", file=sys.stderr)
 
     app = MeshTTYApp()
     app._debug = args.debug
     app._bot = args.bot
+    app._log = args.log
     app.run()
 
 

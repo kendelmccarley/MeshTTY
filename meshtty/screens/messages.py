@@ -106,6 +106,12 @@ class MessagesView(Widget):
                     return (None, node_id)
         return (0, "^all")
 
+    def _log(self, direction: str, prefix: str, text: str) -> None:
+        """Write one entry to the message log if --log is active."""
+        ml = getattr(self.app, "message_log", None)
+        if ml is not None:
+            ml.log(direction, prefix, text)
+
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
@@ -132,6 +138,7 @@ class MessagesView(Widget):
                         event.from_id, event.to_id, event.channel,
                         text, event.rx_time, False, event.packet_id, prefix,
                     )
+                    self._log("RX", prefix, text)
                     # Send reply back to sender and display it
                     transport = self.app.transport
                     if transport and transport.is_connected:
@@ -145,6 +152,7 @@ class MessagesView(Widget):
                         "me", event.from_id, 0,
                         reply, now, True, None, prefix,
                     )
+                    self._log("TX", prefix, reply)
                     return
 
             # Normal message handling
@@ -166,6 +174,7 @@ class MessagesView(Widget):
                 event.packet_id,
                 prefix,
             )
+            self._log("RX", prefix, event.text)
         except Exception:
             pass
 
@@ -196,6 +205,7 @@ class MessagesView(Widget):
                 None,
                 event.prefix,
             )
+            self._log("TX", event.prefix, event.text)
         except Exception:
             pass
 
