@@ -12,10 +12,12 @@ _GPIO_BASE = Path("/sys/class/gpio")
 _INDEX_FILE = Path.home() / ".config" / "meshtty" / "joke_index"
 _MAX_MSG_LEN = 200
 
-_HELP_TEXT = "/HELP /JOKE /GPIO /WEATHER /NEWS /NULL"
+_HELP_TEXT = "/HELP /INFO /JOKE /GPIO /WEATHER /NEWS /NULL"
+_INFO_TEXT = "https://github.com/kendelmccarley/MeshTTY"
 
 _KNOWN_COMMANDS = {
     "/HELP",
+    "/INFO",
     "/JOKE",
     "/GPIO",
     "/WEATHER",
@@ -97,6 +99,8 @@ class CommandHandler:
             return None
         if word == "/HELP":
             return _HELP_TEXT
+        if word == "/INFO":
+            return _INFO_TEXT
         if word == "/JOKE":
             return _truncate(self._next_joke())
         if word == "/GPIO":

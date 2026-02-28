@@ -73,11 +73,12 @@ class MeshTTYApp(App):
 
     # App-level state — accessible from all screens via self.app.*
     _debug: bool = False  # set by main() before run()
+    _bot: bool = False    # set by main() before run()
     transport: TransportManager | None = None
     config: AppConfig = None  # type: ignore[assignment]
     db: Database = None       # type: ignore[assignment]
     bridge: EventBridge = None  # type: ignore[assignment]
-    command_handler: CommandHandler = None  # type: ignore[assignment]
+    command_handler: CommandHandler | None = None
 
     def on_mount(self) -> None:
         self.config = load_config()
@@ -86,7 +87,8 @@ class MeshTTYApp(App):
             logging.getLogger(__name__).debug("Debug logging active → %s", LOG_FILE)
         self.db = Database(self.config.db_path)
         self.bridge = EventBridge(self)
-        self.command_handler = CommandHandler()
+        if self._bot:
+            self.command_handler = CommandHandler()
 
         for t in ALL_THEMES:
             self.register_theme(t)
@@ -199,13 +201,21 @@ def main() -> None:
         action="store_true",
         help=f"Enable DEBUG logging (all loggers including meshtastic) → {LOG_FILE}",
     )
+    parser.add_argument(
+        "--bot",
+        action="store_true",
+        help="Enable DM slash-command bot (responds to /HELP, /JOKE, /INFO, etc.)",
+    )
     args = parser.parse_args()
 
     if args.debug:
         print(f"Debug logging enabled → {LOG_FILE}", file=sys.stderr)
+    if args.bot:
+        print("Bot mode enabled — responding to DM slash commands", file=sys.stderr)
 
     app = MeshTTYApp()
     app._debug = args.debug
+    app._bot = args.bot
     app.run()
 
 

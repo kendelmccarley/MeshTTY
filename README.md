@@ -89,12 +89,13 @@ automatically to the **Main Screen**.
 ## 3. Command-Line Flags
 
 ```
-meshtty [--debug]
+meshtty [--debug] [--bot]
 ```
 
 | Flag      | Description                                                  |
 |-----------|--------------------------------------------------------------|
 | `--debug` | Enable DEBUG-level logging to `/tmp/meshtty.log`.            |
+| `--bot`   | Enable the DM slash-command bot (see section 5.6).           |
 | `-h`      | Print help and exit.                                         |
 
 ---
@@ -293,19 +294,28 @@ other settings apply on the next connection.
 
 ### 5.6 DM Slash Commands
 
-MeshTTY recognises a set of slash commands when they arrive as **direct
-messages** (not channel broadcasts).  Any DM whose text begins with `/` is
-checked against the command list.
+The slash-command bot is **disabled by default**.  Start MeshTTY with the
+`--bot` flag to enable it:
+
+```
+meshtty --bot
+```
+
+When enabled, any incoming **direct message** (not a channel broadcast) whose
+text begins with `/` is checked against the command list.
 
 - Valid commands are displayed in the message history and an automatic reply
   is sent back to the sender.
 - Unrecognised `/` commands are silently dropped and not displayed.
+- When `--bot` is not set, DMs starting with `/` are displayed as normal
+  messages and no automatic reply is sent.
 
 #### Available commands
 
 | Command    | Response                                                          |
 |------------|-------------------------------------------------------------------|
 | `/HELP`    | Lists all available commands.                                     |
+| `/INFO`    | Returns the URL of the MeshTTY git repository.                    |
 | `/JOKE`    | Returns the next joke from the joke file (sequential, wraps).     |
 | `/GPIO`    | Returns the state of exported GPIO pins read via sysfs.           |
 | `/WEATHER` | Returns a placeholder string (feature not implemented).           |
