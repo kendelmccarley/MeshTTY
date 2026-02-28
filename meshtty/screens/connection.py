@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +103,11 @@ class ConnectionScreen(Screen):
                     yield DataTable(id="serial-table", show_cursor=True)
                     yield Label("Or enter port manually:", classes="section-label")
                     yield Input(
-                        placeholder="/dev/ttyUSB0",
+                        placeholder=(
+                            "/dev/cu.usbserial-XXXX"
+                            if sys.platform == "darwin"
+                            else "/dev/ttyUSB0"
+                        ),
                         id="serial-input",
                     )
                 with TabPane("TCP / WiFi", id="tab-tcp"):

@@ -40,13 +40,35 @@ or Bluetooth (BLE).
 
 ## 1. Installation
 
-Use the provided install script (recommended on Raspberry Pi):
+MeshTTY runs on **Raspberry Pi OS**, **Ubuntu / Debian**, and **macOS 12+**.
+
+### Raspberry Pi OS and Ubuntu
+
+Use the provided install script:
 
 ```
 bash install.sh
 ```
 
-Or install manually into a virtual environment:
+The script installs system packages via `apt-get`, creates a Python
+virtualenv, adds your user to the `dialout` and `bluetooth` groups, and
+generates `meshtty.sh`.  Log out and back in after running it for group
+membership to take effect.
+
+### macOS
+
+[Homebrew](https://brew.sh) must be installed first.  Then:
+
+```
+bash install.sh
+```
+
+The script uses `brew` instead of `apt-get`, skips group changes (not needed
+on macOS), and generates `meshtty.sh`.  For Bluetooth, grant your terminal
+app Bluetooth permission when prompted (System Settings → Privacy &
+Security → Bluetooth).
+
+### Manual install (any platform)
 
 ```
 python3 -m venv ~/.venv/meshtty
@@ -516,7 +538,9 @@ In normal operation the log level is controlled by `log_level` in config
 
 ---
 
-## 11. Serial Port Permissions (Linux)
+## 11. Serial Port Permissions
+
+### Linux (Raspberry Pi OS and Ubuntu)
 
 ```
 sudo usermod -aG dialout $USER
@@ -527,6 +551,15 @@ Log out and back in.  Verify:
 ```
 groups   # output should include "dialout"
 ```
+
+`install.sh` handles this automatically.
+
+### macOS
+
+No group membership is required.  USB serial devices are accessible to any
+user.  Serial devices appear as `/dev/cu.usbserial-XXXX`,
+`/dev/cu.SLAB_USBtoUART`, or similar — the exact name depends on the USB
+chip in your radio.  Run `ls /dev/cu.*` with the radio plugged in to find it.
 
 ---
 
@@ -601,6 +634,10 @@ The scanner filters by USB vendor ID.  Supported chips:
 | Espressif USB-JTAG  | 303A    |
 
 If your adapter uses a different chip, enter the port path manually.
+
+On **macOS**, serial devices do not appear as `/dev/ttyUSB*`.  Run
+`ls /dev/cu.*` with the radio connected to find the correct path
+(typically `/dev/cu.usbserial-XXXX` or `/dev/cu.SLAB_USBtoUART`).
 
 ### BLE scan finds no devices
 
