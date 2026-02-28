@@ -23,6 +23,8 @@ from textual.widgets import (
     TabPane,
 )
 
+from textual.events import Key
+
 from meshtty.messages.app_messages import ConnectionEstablished, ConnectionLost, NodeUpdated
 from meshtty.transport.ble_transport import BLETransport
 from meshtty.transport.discovery import scan_ble_devices, scan_serial_ports
@@ -86,6 +88,9 @@ class ConnectionScreen(Screen):
         self._download_dots = 0
         self._download_timer = None
         self._already_transitioned = False
+        self._autoconnect_timer = None
+        self._autoconnect_remaining = 5
+        self._programmatic_tab_change = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -133,6 +138,7 @@ class ConnectionScreen(Screen):
         # Set active tab to configured default transport
         tab_map = {"serial": "tab-serial", "tcp": "tab-tcp", "ble": "tab-ble"}
         tab_id = tab_map.get(cfg.default_transport, "tab-serial")
+        self._programmatic_tab_change = True
         self.query_one(TabbedContent).active = tab_id
 
         # Set up serial table
@@ -148,6 +154,10 @@ class ConnectionScreen(Screen):
         # Auto-scan serial ports on mount
         self._scan_serial()
 
+        # Start auto-connect countdown if a device is remembered
+        if self.app._has_saved_transport():
+            self._start_autoconnect_countdown()
+
     # ------------------------------------------------------------------
     # Workers
     # ------------------------------------------------------------------
@@ -162,13 +172,15 @@ class ConnectionScreen(Screen):
         table.clear()
         for p in ports:
             table.add_row(p["port"], p["description"], key=p["port"])
-        if ports:
-            self._set_status(f"Found {len(ports)} serial device(s).")
-            # Auto-populate the input when exactly one device is detected
-            if len(ports) == 1:
-                self.query_one("#serial-input", Input).value = ports[0]["port"]
-        else:
-            self._set_status("No serial devices detected. Enter port manually.")
+        # Auto-populate the input when exactly one device is detected
+        if len(ports) == 1:
+            self.query_one("#serial-input", Input).value = ports[0]["port"]
+        # Don't overwrite the status label if the auto-connect countdown is running
+        if self._autoconnect_timer is None:
+            if ports:
+                self._set_status(f"Found {len(ports)} serial device(s).")
+            else:
+                self._set_status("No serial devices detected. Enter port manually.")
 
     @work(exclusive=True, name="ble-scan")
     async def _scan_ble(self) -> None:
@@ -214,8 +226,39 @@ class ConnectionScreen(Screen):
                 pass
 
     # ------------------------------------------------------------------
+    # Auto-connect countdown
+    # ------------------------------------------------------------------
+
+    def _start_autoconnect_countdown(self) -> None:
+        self._autoconnect_remaining = 5
+        self._set_status(
+            f"Connecting in {self._autoconnect_remaining}s\u2026 (press any key to cancel)"
+        )
+        self._autoconnect_timer = self.set_interval(1.0, self._autoconnect_tick)
+
+    def _autoconnect_tick(self) -> None:
+        self._autoconnect_remaining -= 1
+        if self._autoconnect_remaining <= 0:
+            self._autoconnect_timer.stop()
+            self._autoconnect_timer = None
+            self._attempt_connect()
+        else:
+            self._set_status(
+                f"Connecting in {self._autoconnect_remaining}s\u2026 (press any key to cancel)"
+            )
+
+    def _cancel_autoconnect(self) -> None:
+        if self._autoconnect_timer is not None:
+            self._autoconnect_timer.stop()
+            self._autoconnect_timer = None
+            self._set_status("")
+
+    # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
+
+    def on_key(self, event: Key) -> None:
+        self._cancel_autoconnect()
 
     def on_node_updated(self, event: NodeUpdated) -> None:
         """Count nodes arriving during the connection handshake and show progress."""
@@ -238,7 +281,14 @@ class ConnectionScreen(Screen):
             f"Download complete ({label}) \u2014 waiting for radio confirmation\u2026"
         )
 
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        if self._programmatic_tab_change:
+            self._programmatic_tab_change = False
+            return
+        self._cancel_autoconnect()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        self._cancel_autoconnect()
         if event.button.id == "ble-scan-btn":
             self._scan_ble()
         elif event.button.id == "connect-btn":
