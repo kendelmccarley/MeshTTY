@@ -34,6 +34,7 @@ or Bluetooth (BLE).
 11. [Serial Port Permissions (Linux)](#11-serial-port-permissions-linux)
 12. [Known Issues & Missing Features](#12-known-issues--missing-features)
 13. [Troubleshooting](#13-troubleshooting)
+14. [Headless / Kiosk Operation (Raspberry Pi)](#14-headless--kiosk-operation-raspberry-pi)
 
 ---
 
@@ -129,6 +130,13 @@ The first screen shown on launch.  Choose how to connect to your radio node.
 
 The **Remember this device** switch (on by default) saves connection details
 so the same transport and address are pre-filled on the next launch.
+
+### Auto-connect
+
+If a device was remembered from a previous session, the connection screen
+starts a 5-second countdown and connects automatically.  The status line
+shows "Connecting in Ns… (press any key to cancel)".  Press any key, switch
+tabs, or click a button to cancel and configure manually.
 
 ### Status messages
 
@@ -533,8 +541,6 @@ This is a pre-alpha release.  The following are known to be broken or absent:
 
 ### Not yet implemented
 
-- **Auto-connect on launch** — The `auto_connect` config key is saved but the
-  connection screen does not yet auto-connect on startup.
 - **Channel switching confirmation** — Clicking a channel in the Channels tab
   switches the compose prefix but does not visually confirm which channel is
   active.
@@ -610,3 +616,65 @@ python3 -m json.tool ~/.config/meshtty/config.json
 
 If `"theme"` contains an unrecognised value, the app silently resets it to
 `meshtty-multicolor`.
+
+---
+
+## 14. Headless / Kiosk Operation (Raspberry Pi)
+
+MeshTTY is designed to run as a full-screen kiosk app on a headless Pi
+connected to a physical display — no desktop environment required.
+
+### Setup
+
+1. Configure the Pi for **console auto-login** (e.g. `raspi-config` →
+   System Options → Boot / Auto Login → Console Autologin).
+2. Run `install.sh` on the Pi and answer **Y** when asked about auto-launch.
+
+The installer adds a block to `~/.bash_profile` that:
+
+- Activates only on `tty1` (the physical console) — SSH sessions are
+  unaffected.
+- Sets `TERM=xterm-256color` for full colour rendering.
+- Runs MeshTTY in a restart loop so it comes back automatically after an
+  exit or crash.
+
+```bash
+# MeshTTY auto-launch on tty1 (physical Pi screen)
+if [[ "$(tty)" == "/dev/tty1" ]]; then
+    export TERM=xterm-256color
+    while true; do
+        /home/pi/Vibe/MeshTTY/meshtty.sh
+        sleep 2
+    done
+fi
+```
+
+### What happens at boot
+
+| Step | What MeshTTY does |
+|------|-------------------|
+| Login shell starts | `~/.bash_profile` runs the restart loop |
+| `meshtty.sh` starts | Checks stdin/stdout are a TTY; exits with an error if not |
+| Serial transport configured | Waits up to 10 s for the USB device to enumerate (handles boot timing race) |
+| App launches | Connection screen appears |
+| Saved device present | 5-second countdown begins; connects automatically |
+| App exits for any reason | `sleep 2`, then `meshtty.sh` restarts |
+
+### Troubleshooting a headless Pi
+
+If the app is not starting or behaving unexpectedly, SSH in from another
+machine to investigate without disturbing the console:
+
+```
+ssh pi@<pi-hostname>
+tail -f /tmp/meshtty.log          # live log output
+```
+
+Common issues on first boot:
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| Black screen / app not starting | User not in `dialout` group | Re-run `install.sh` or `sudo usermod -aG dialout pi` then reboot |
+| "Waiting for USB serial device…" then connection fails | Radio not plugged in or wrong port | Plug in radio before booting; check `dmesg \| grep tty` |
+| App starts but auto-connect does not fire | No saved device in config | Connect once manually; check **Remember this device** |
+| App crashes immediately | `TERM` not set or `dumb` | Ensure the `~/.bash_profile` block sets `TERM=xterm-256color` |
