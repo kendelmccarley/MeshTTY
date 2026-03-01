@@ -191,7 +191,15 @@ if grep -q '"default_transport".*"serial"' "\$CONFIG" 2>/dev/null; then
     fi
 fi
 
-exec python -m meshtty.main "\$@"
+# Load flags saved by the last manual launch (--debug, --bot, --log, etc.)
+FLAGS_FILE="\$HOME/.config/meshtty/last_flags"
+SAVED_FLAGS=""
+if [[ -f "\$FLAGS_FILE" ]]; then
+    SAVED_FLAGS=\$(cat "\$FLAGS_FILE")
+fi
+
+# shellcheck disable=SC2086  # word-split intentional for flag list
+exec python -m meshtty.main \$SAVED_FLAGS "\$@"
 STARTSCRIPT
 chmod +x "$START_SCRIPT"
 echo ">>> Start script created: $START_SCRIPT"

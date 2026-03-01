@@ -87,6 +87,7 @@ class ConnectionScreen(Screen):
         super().__init__()
         self._connecting = False
         self._download_dots = 0
+        self._download_done = False
         self._download_timer = None
         self._already_transitioned = False
         self._autoconnect_timer = None
@@ -267,7 +268,7 @@ class ConnectionScreen(Screen):
 
     def on_node_updated(self, event: NodeUpdated) -> None:
         """Count nodes arriving during the connection handshake and show progress."""
-        if not self._connecting:
+        if not self._connecting or self._download_done:
             return
         self._download_dots += 1
         dots = "." * self._download_dots
@@ -280,6 +281,7 @@ class ConnectionScreen(Screen):
     def _on_download_complete(self) -> None:
         if not self._connecting:
             return
+        self._download_done = True
         n = self._download_dots
         label = f"{n} node{'s' if n != 1 else ''}"
         self._set_status(
@@ -323,6 +325,7 @@ class ConnectionScreen(Screen):
         self._connecting = True
         self._already_transitioned = False
         self._download_dots = 0
+        self._download_done = False
         if self._download_timer is not None:
             self._download_timer.stop()
             self._download_timer = None
