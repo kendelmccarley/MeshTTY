@@ -44,9 +44,9 @@ MeshTTY runs on **Raspberry Pi OS**, **Ubuntu / Debian**, and **macOS 12+**.
 
 ### Raspberry Pi OS and Ubuntu
 
-Use the provided install script:
-
 ```
+git clone https://github.com/kendelmccarley/MeshTTY.git
+cd MeshTTY
 bash install.sh
 ```
 
@@ -60,6 +60,8 @@ membership to take effect.
 [Homebrew](https://brew.sh) must be installed first.  Then:
 
 ```
+git clone https://github.com/kendelmccarley/MeshTTY.git
+cd MeshTTY
 bash install.sh
 ```
 
