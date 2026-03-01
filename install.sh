@@ -191,10 +191,12 @@ if grep -q '"default_transport".*"serial"' "\$CONFIG" 2>/dev/null; then
     fi
 fi
 
-# Load flags saved by the last manual launch (--debug, --bot, --log, etc.)
+# If no flags were passed manually, replay the flags from the last run.
+# If flags were passed explicitly, use only those (and they will be saved
+# by main.py, replacing whatever was stored before).
 FLAGS_FILE="\$HOME/.config/meshtty/last_flags"
 SAVED_FLAGS=""
-if [[ -f "\$FLAGS_FILE" ]]; then
+if [[ \$# -eq 0 && -f "\$FLAGS_FILE" ]]; then
     SAVED_FLAGS=\$(cat "\$FLAGS_FILE")
 fi
 

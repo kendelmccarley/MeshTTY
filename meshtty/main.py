@@ -224,7 +224,24 @@ def main() -> None:
         action="store_true",
         help=f"Log all inbound and outbound messages to {MESSAGE_LOG_FILE}",
     )
+    parser.add_argument(
+        "--noargs",
+        action="store_true",
+        help="Clear saved startup flags and launch with no flags active.",
+    )
     args = parser.parse_args()
+
+    # --noargs overrides everything: clear the saved flags file and launch clean.
+    if args.noargs:
+        try:
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            (CONFIG_DIR / "last_flags").write_text("")
+        except OSError:
+            pass
+        print("Saved startup flags cleared.", file=sys.stderr)
+        app = MeshTTYApp()
+        app.run()
+        return
 
     # Persist flags so meshtty.sh can replay them on the next auto-launch.
     flags = []
