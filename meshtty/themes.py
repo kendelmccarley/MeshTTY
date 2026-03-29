@@ -1,48 +1,54 @@
 from textual.theme import Theme
 
-THEME_MULTICOLOR = Theme(
-    name="meshtty-multicolor",
+# ── cool-retro-term: Default Amber ────────────────────────────────────────────
+# fontColor: #ff8100  backgroundColor: #000000
+THEME_AMBER = Theme(
+    name="crt-amber",
     dark=True,
-    background="#0D0D12",
-    surface="#16161F",
-    panel="#1E1E2E",
-    primary="#7AA2F7",
-    secondary="#BB9AF7",
-    accent="#FF79C6",
-    success="#9ECE6A",
-    warning="#E0AF68",
-    error="#F7768E",
-    variables={"text-muted": "#565F89"},
+    background="#000000",
+    surface="#080400",
+    panel="#100800",
+    primary="#ff8100",
+    secondary="#cc6600",
+    accent="#ffb347",
+    success="#ffa040",
+    warning="#ff6000",
+    error="#ff2200",
+    variables={"text-muted": "#7a3c00"},
 )
 
+# ── cool-retro-term: Monochrome Green ─────────────────────────────────────────
+# fontColor: #0ccc68  backgroundColor: #000000
 THEME_PHOSPHOR = Theme(
-    name="meshtty-phosphor",
+    name="crt-phosphor",
     dark=True,
     background="#000000",
-    surface="#050F05",
-    panel="#071007",
-    primary="#33FF33",
-    secondary="#00CC00",
-    accent="#66FF66",
-    success="#00FF00",
-    warning="#AAFF00",
-    error="#FF2200",
-    variables={"text-muted": "#1A6B1A"},
+    surface="#000a02",
+    panel="#001404",
+    primary="#0ccc68",
+    secondary="#08994e",
+    accent="#33ff88",
+    success="#00ff80",
+    warning="#99ff33",
+    error="#ff3300",
+    variables={"text-muted": "#0a5530"},
 )
 
-THEME_BW = Theme(
-    name="meshtty-bw",
+# ── cool-retro-term: IBM VGA 8×16 ─────────────────────────────────────────────
+# fontColor: #c0c0c0  backgroundColor: #000000
+THEME_IBM = Theme(
+    name="crt-ibm",
     dark=True,
     background="#000000",
-    surface="#0F0F0F",
-    panel="#1A1A1A",
-    primary="#FFFFFF",
-    secondary="#BBBBBB",
-    accent="#FFFFFF",
-    success="#DDDDDD",
-    warning="#999999",
-    error="#666666",
+    surface="#0a0a0a",
+    panel="#141414",
+    primary="#c0c0c0",
+    secondary="#888888",
+    accent="#ffffff",
+    success="#aaaaaa",
+    warning="#888888",
+    error="#ff5555",
     variables={"text-muted": "#555555"},
 )
 
-ALL_THEMES = [THEME_MULTICOLOR, THEME_PHOSPHOR, THEME_BW]
+ALL_THEMES = [THEME_AMBER, THEME_PHOSPHOR, THEME_IBM]

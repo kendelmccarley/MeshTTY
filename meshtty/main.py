@@ -60,8 +60,8 @@ class MeshTTYApp(App):
 
     CSS_PATH = "../assets/meshtty.tcss"
 
-    TITLE = "MeshTTY"
-    SUB_TITLE = "Meshtastic for Raspberry Pi"
+    TITLE = "MESHTTY"
+    SUB_TITLE = "MESHTASTIC MESH RADIO"
 
     BINDINGS = [
         Binding("f1", "show_help", "Help"),
@@ -99,7 +99,7 @@ class MeshTTYApp(App):
             self.register_theme(t)
         valid = {t.name for t in ALL_THEMES}
         if self.config.theme not in valid:
-            self.config.theme = "meshtty-multicolor"
+            self.config.theme = "crt-amber"
         self.theme = self.config.theme
 
         if self.config.auto_connect and self._has_saved_transport():

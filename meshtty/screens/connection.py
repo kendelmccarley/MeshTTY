@@ -97,12 +97,12 @@ class ConnectionScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with Container(id="conn-container"):
-            yield Label("MeshTTY — Connect to Radio", classes="section-label")
+            yield Label("MESHTTY // CONNECT TO RADIO", classes="section-label")
             with TabbedContent(id="transport-tabs"):
-                with TabPane("Serial / USB", id="tab-serial"):
-                    yield Label("Detected devices:", classes="section-label")
+                with TabPane("SERIAL/USB", id="tab-serial"):
+                    yield Label("DETECTED DEVICES:", classes="section-label")
                     yield DataTable(id="serial-table", show_cursor=True)
-                    yield Label("Or enter port manually:", classes="section-label")
+                    yield Label("OR ENTER PORT MANUALLY:", classes="section-label")
                     yield Input(
                         placeholder=(
                             "/dev/cu.usbserial-XXXX"
@@ -111,26 +111,26 @@ class ConnectionScreen(Screen):
                         ),
                         id="serial-input",
                     )
-                with TabPane("TCP / WiFi", id="tab-tcp"):
-                    yield Label("Hostname or IP address:", classes="section-label")
+                with TabPane("TCP/WIFI", id="tab-tcp"):
+                    yield Label("HOSTNAME OR IP ADDRESS:", classes="section-label")
                     yield Input(placeholder="192.168.1.100", id="tcp-host")
-                    yield Label("Port:", classes="section-label")
+                    yield Label("PORT:", classes="section-label")
                     yield Input(placeholder="4403", id="tcp-port", value="4403")
-                with TabPane("Bluetooth (BLE)", id="tab-ble"):
-                    yield Label("Detected Meshtastic devices:", classes="section-label")
+                with TabPane("BLE", id="tab-ble"):
+                    yield Label("DETECTED MESHTASTIC DEVICES:", classes="section-label")
                     yield DataTable(id="ble-table", show_cursor=True)
-                    yield Label("Or enter address manually:", classes="section-label")
+                    yield Label("OR ENTER ADDRESS MANUALLY:", classes="section-label")
                     yield Input(
                         placeholder="AA:BB:CC:DD:EE:FF",
                         id="ble-input",
                     )
-                    yield Button("Scan for BLE Devices", id="ble-scan-btn", variant="default")
+                    yield Button("SCAN FOR BLE DEVICES", id="ble-scan-btn", variant="default")
             with Horizontal(id="remember-row"):
                 yield Switch(value=True, id="remember-switch")
                 yield Label("Remember this device")
             yield Label("", id="status-label")
             yield Label("", id="error-label")
-            yield Button("Connect", id="connect-btn", variant="primary")
+            yield Button("CONNECT", id="connect-btn", variant="primary")
 
     def on_mount(self) -> None:
         cfg = self.app.config

@@ -35,13 +35,13 @@ class MainScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with TabbedContent(id="main-tabs", initial="tab-messages"):
-            with TabPane("Messages", id="tab-messages"):
+            with TabPane("MESSAGES", id="tab-messages"):
                 yield MessagesView(id="messages-view")
-            with TabPane("Channels", id="tab-channels"):
+            with TabPane("CHANNELS", id="tab-channels"):
                 yield ChannelView(id="channels-view")
-            with TabPane("Nodes", id="tab-nodes"):
+            with TabPane("NODES", id="tab-nodes"):
                 yield NodeListView(id="nodes-view")
-            with TabPane("Settings", id="tab-settings"):
+            with TabPane("SETTINGS", id="tab-settings"):
                 yield SettingsView(id="settings-view")
 
     def on_mount(self) -> None:

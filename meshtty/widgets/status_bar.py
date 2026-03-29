@@ -58,11 +58,11 @@ class ConnectionStatusBar(Widget):
 
     def compose(self) -> ComposeResult:
         with Horizontal():
-            yield Label("● Disconnected", id="conn-state")
-            yield Label("Ch: —", id="channel-label")
-            yield Label("Nodes: 0", id="node-count")
+            yield Label("▮ OFFLINE", id="conn-state")
+            yield Label("CH: —", id="channel-label")
+            yield Label("NODES: 0", id="node-count")
             yield Label("", id="battery-label")
-            yield Button("Disconnect", id="disconnect-btn", variant="error")
+            yield Button("DISCONNECT", id="disconnect-btn", variant="error")
 
     # ------------------------------------------------------------------
     # Watchers — called automatically when reactives change
@@ -73,29 +73,29 @@ class ConnectionStatusBar(Widget):
         btn = self.query_one("#disconnect-btn", Button)
         if state == "connected":
             transport = getattr(self.app, "transport", None)
-            transport_str = f" via {transport}" if transport else ""
-            label.update(f"● Connected{transport_str}")
+            transport_str = f" // {transport}" if transport else ""
+            label.update(f"▶ ONLINE{transport_str}")
             label.add_class("connected")
             label.remove_class("disconnected")
             btn.disabled = False
         else:
-            label.update("● Disconnected")
+            label.update("▮ OFFLINE")
             label.remove_class("connected")
             label.add_class("disconnected")
             btn.disabled = True
 
     def watch_channel_name(self, name: str) -> None:
-        self.query_one("#channel-label", Label).update(f"Ch: {name}")
+        self.query_one("#channel-label", Label).update(f"CH: {name}")
 
     def watch_node_count(self, count: int) -> None:
-        self.query_one("#node-count", Label).update(f"Nodes: {count}")
+        self.query_one("#node-count", Label).update(f"NODES: {count}")
 
     def watch_battery_level(self, level: int | None) -> None:
         label = self.query_one("#battery-label", Label)
         if level is None:
             label.update("")
         else:
-            label.update(f"Bat: {level}%")
+            label.update(f"BAT: {level}%")
 
     # ------------------------------------------------------------------
     # Button handler bubbles up to MainScreen

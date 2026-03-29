@@ -1,23 +1,16 @@
-/* meshtty.tcss — global layout
+/* meshtty.tcss — retro CRT layout & style
  *
- * Design principles:
- *  - All interactive targets are at least 3 lines tall (finger-friendly)
- *  - No hardcoded pixel values; fractional/percentage units throughout
- *  - Dark theme by default (matches Pi headless terminal defaults)
+ * Designed to run inside cool-retro-term.
+ * Color variables resolve to whichever crt-* theme is active.
  */
 
-/* ------------------------------------------------------------------ */
-/* App-level                                                            */
-/* ------------------------------------------------------------------ */
+/* ── App ──────────────────────────────────────────────────────────────────── */
 
 App {
     background: $background;
 }
 
-
-/* ------------------------------------------------------------------ */
-/* MainScreen tabs                                                      */
-/* ------------------------------------------------------------------ */
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
 
 TabbedContent {
     height: 1fr;
@@ -28,9 +21,29 @@ TabPane {
     padding: 0;
 }
 
-/* ------------------------------------------------------------------ */
-/* MessagesView                                                         */
-/* ------------------------------------------------------------------ */
+Tabs {
+    background: $background;
+    border-bottom: solid $primary;
+}
+
+Tab {
+    color: $secondary;
+    text-style: bold;
+    background: $background;
+}
+
+Tab.-active {
+    color: $primary;
+    background: $surface;
+    text-style: bold;
+}
+
+Tab:hover {
+    color: $accent;
+    background: $background;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────────── */
 
 MessagesView {
     height: 1fr;
@@ -40,8 +53,8 @@ MessagesView {
 MessageView {
     height: 1fr;
     overflow-y: auto;
-    padding: 0;
-    background: $surface;
+    padding: 0 1;
+    background: $background;
 }
 
 MessageView Label {
@@ -51,18 +64,20 @@ MessageView Label {
 
 MessageView .mine {
     color: $accent;
+    text-style: bold;
 }
 
 MessageView .theirs {
-    color: $text;
+    color: $primary;
 }
 
-/* Compose bar */
+/* ── Compose bar ──────────────────────────────────────────────────────────── */
+
 ComposeBar {
     dock: bottom;
     height: 3;
-    background: $surface;
-    border-top: solid $primary;
+    background: $background;
+    border-top: double $primary;
 }
 
 ComposeBar Horizontal {
@@ -73,17 +88,19 @@ ComposeBar Horizontal {
 ComposeBar Input {
     width: 1fr;
     height: 3;
+    background: $background;
+    color: $primary;
+    border: none;
 }
 
 ComposeBar Button {
     width: 10;
     min-height: 3;
     margin: 0 0 0 1;
+    text-style: bold;
 }
 
-/* ------------------------------------------------------------------ */
-/* ChannelView                                                          */
-/* ------------------------------------------------------------------ */
+/* ── Channels ─────────────────────────────────────────────────────────────── */
 
 ChannelView {
     height: 1fr;
@@ -102,11 +119,11 @@ ChannelView ListItem {
 
 ChannelView ListItem.--highlight {
     background: $primary 30%;
+    color: $background;
+    text-style: bold;
 }
 
-/* ------------------------------------------------------------------ */
-/* NodeListView                                                         */
-/* ------------------------------------------------------------------ */
+/* ── Nodes ────────────────────────────────────────────────────────────────── */
 
 NodeListView {
     height: 1fr;
@@ -122,16 +139,17 @@ NodeTable DataTable {
 }
 
 DataTable > .datatable--header {
-    background: $primary 20%;
+    background: $background;
+    color: $primary;
+    text-style: bold;
 }
 
 DataTable > .datatable--cursor {
-    background: $primary 40%;
+    background: $primary 25%;
+    color: $accent;
 }
 
-/* ------------------------------------------------------------------ */
-/* NodeDetailModal                                                      */
-/* ------------------------------------------------------------------ */
+/* ── Node detail modal ────────────────────────────────────────────────────── */
 
 NodeDetailModal {
     align: center middle;
@@ -141,23 +159,25 @@ NodeDetailModal {
     width: 60;
     height: auto;
     max-height: 80vh;
-    border: round $primary;
-    background: $surface;
+    border: double $primary;
+    background: $background;
     padding: 1 2;
 }
 
 #modal-title {
-    color: $primary;
+    color: $accent;
     text-style: bold;
     padding: 0 0 1 0;
 }
 
 .field-label {
-    color: $text-muted;
+    color: $secondary;
+    text-style: bold;
     padding: 1 0 0 0;
 }
 
 .field-value {
+    color: $primary;
     padding: 0 0 0 2;
 }
 
@@ -165,11 +185,10 @@ NodeDetailModal {
     margin-top: 1;
     min-height: 3;
     width: 100%;
+    text-style: bold;
 }
 
-/* ------------------------------------------------------------------ */
-/* SettingsView                                                         */
-/* ------------------------------------------------------------------ */
+/* ── Settings ─────────────────────────────────────────────────────────────── */
 
 SettingsView {
     height: 1fr;
@@ -178,7 +197,7 @@ SettingsView {
 }
 
 .section-header {
-    color: $primary;
+    color: $accent;
     text-style: bold;
     padding: 1 0 0 0;
 }
@@ -191,6 +210,7 @@ SettingsView .row {
 
 SettingsView .row Label {
     width: 28;
+    color: $secondary;
 }
 
 SettingsView .row Input,
@@ -207,31 +227,34 @@ SettingsView Switch {
     margin-top: 2;
     min-height: 3;
     width: 20;
+    text-style: bold;
 }
 
 #save-status {
     padding: 1 0;
     color: $success;
+    text-style: bold;
 }
 
 #disconnect-btn {
     margin-top: 1;
     min-height: 3;
     width: 20;
+    text-style: bold;
 }
 
-/* ------------------------------------------------------------------ */
-/* ConnectionScreen                                                     */
-/* ------------------------------------------------------------------ */
+/* ── Connection screen ────────────────────────────────────────────────────── */
 
 ConnectionScreen {
     align: center middle;
+    background: $background;
 }
 
 #conn-container {
     width: 80;
     height: auto;
-    border: round $primary;
+    border: double $primary;
+    background: $background;
     padding: 1 2;
 }
 
@@ -239,12 +262,14 @@ ConnectionScreen {
     height: 3;
     content-align: center middle;
     color: $warning;
+    text-style: bold;
 }
 
 #error-label {
     height: 3;
     content-align: center middle;
     color: $error;
+    text-style: bold;
 }
 
 #remember-row {
@@ -254,19 +279,90 @@ ConnectionScreen {
 
 #remember-row Label {
     padding: 0 1;
+    color: $secondary;
 }
 
 .section-label {
     padding: 1 0 0 0;
-    color: $text-muted;
+    color: $secondary;
+    text-style: bold;
 }
 
 ConnectionScreen DataTable {
     height: 8;
 }
 
-/* All buttons touchscreen-friendly globally */
+/* ── Global button style ──────────────────────────────────────────────────── */
+
 Button {
     min-height: 3;
-    margin: 0 0 0 0;
+    margin: 0;
+    text-style: bold;
+}
+
+/* ── Status bar ───────────────────────────────────────────────────────────── */
+
+ConnectionStatusBar {
+    dock: top;
+    height: 3;
+    background: $background;
+    border-bottom: double $primary;
+}
+
+ConnectionStatusBar Horizontal {
+    height: 3;
+    align: left middle;
+}
+
+#conn-state {
+    width: auto;
+    padding: 0 2;
+    min-width: 24;
+    color: $primary;
+    text-style: bold;
+}
+
+#conn-state.connected {
+    color: $accent;
+}
+
+#conn-state.disconnected {
+    color: $error;
+}
+
+#channel-label {
+    width: auto;
+    padding: 0 2;
+    color: $secondary;
+}
+
+#node-count {
+    width: auto;
+    padding: 0 2;
+    color: $secondary;
+}
+
+#battery-label {
+    width: auto;
+    padding: 0 2;
+    color: $secondary;
+}
+
+ConnectionStatusBar #disconnect-btn {
+    dock: right;
+    margin: 0 1;
+    min-height: 3;
+    min-width: 14;
+}
+
+/* ── Loading indicator ────────────────────────────────────────────────────── */
+
+LoadingIndicator {
+    color: $primary;
+}
+
+/* ── Help modal ───────────────────────────────────────────────────────────── */
+
+HelpModal {
+    align: center middle;
 }
