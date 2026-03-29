@@ -21,6 +21,9 @@ terminal without cool-retro-term.
 ## Table of Contents
 
 1. [Installation](#1-installation)
+   - 1.1 [Raspberry Pi and DietPi](#11-raspberry-pi-and-dietpi)
+   - 1.2 [macOS and Ubuntu](#12-macos-and-ubuntu)
+   - 1.3 [Manual install](#13-manual-install-any-platform)
 2. [Updating](#2-updating)
 3. [cool-retro-term Integration](#3-cool-retro-term-integration)
 4. [Running MeshTTY](#4-running-meshtty)
@@ -47,31 +50,58 @@ terminal without cool-retro-term.
 
 ## 1. Installation
 
-MeshTTY runs on **Raspberry Pi OS**, **Ubuntu / Debian**, and **macOS 12+**.
+### 1.1 Raspberry Pi and DietPi
 
+Use the dedicated Pi installer — it handles Pi-specific setup including the
+OpenGL driver, GPU memory, X kiosk configuration, and per-model warnings.
+
+```bash
+git clone https://github.com/kendelmccarley/MeshTTY.git
+cd MeshTTY
+bash install-pi.sh
 ```
+
+**Supported platforms:**
+
+| Hardware | OS | Notes |
+|----------|----|-------|
+| Pi Zero W | DietPi 32-bit, Raspberry Pi OS Lite | ARMv6 — install takes 30–90 min. Be patient. |
+| Pi Zero 2 W | DietPi 32-bit, Raspberry Pi OS Lite | ARMv7 — faster than Zero W |
+| Pi 3B / 3B+ | Raspberry Pi OS Lite / Desktop | Full support |
+| Pi 4B | Raspberry Pi OS Lite / Desktop | Full support |
+| Pi 5 | Raspberry Pi OS Lite / Desktop | Full support |
+
+The installer will:
+
+- Install system packages via `apt`
+- Optionally install cool-retro-term and a minimal X server (xorg + openbox)
+- Check and configure the OpenGL driver (`vc4-kms-v3d`) if cool-retro-term is requested
+- Check and raise `gpu_mem` if it is set too low (DietPi defaults to 16 MB; cool-retro-term needs ≥ 64 MB)
+- Check available RAM + swap and warn if under 512 MB
+- Handle ARMv6 pip failures gracefully (grpcio wheel incompatibility on Pi Zero W)
+- Create a Python virtualenv at `~/.venv/meshtty`
+- Add your user to the `dialout`, `bluetooth`, and `video` groups
+- Generate `meshtty.sh` and make `launch-pi.sh` executable
+- Optionally configure tty1 auto-launch for kiosk operation
+
+Log out and back in after the install for group membership to take effect.
+
+### 1.2 macOS and Ubuntu
+
+```bash
 git clone https://github.com/kendelmccarley/MeshTTY.git
 cd MeshTTY
 bash install.sh
 ```
 
-The installer is interactive and handles everything:
-
-- Installs system packages (`apt` on Linux/Pi, `brew` on macOS)
-- Optionally installs **cool-retro-term** (see section 3)
-- Creates a Python virtualenv at `~/.venv/meshtty`
-- Installs all Python dependencies
-- Adds your user to the `dialout` and `bluetooth` groups (Linux only)
-- Generates `meshtty.sh`
-
 **macOS prerequisite:** [Homebrew](https://brew.sh) must be installed first.
 
-**Linux/Pi:** Log out and back in after running `install.sh` for serial and
-Bluetooth group membership to take effect.
+The installer handles system packages, virtualenv, optional cool-retro-term,
+and generates `meshtty.sh`.
 
-### Manual install (any platform)
+### 1.3 Manual install (any platform)
 
-```
+```bash
 python3 -m venv ~/.venv/meshtty
 source ~/.venv/meshtty/bin/activate
 pip install -e .
@@ -79,33 +109,34 @@ pip install -e .
 
 **Dependencies installed automatically:**
 
-| Package       | Purpose                                          |
-|---------------|--------------------------------------------------|
-| textual ≥ 0.80 | TUI framework (rendering, widgets, key bindings)|
-| meshtastic    | Meshtastic Python library (serial/TCP/BLE)       |
-| bleak         | Bluetooth BLE scanning                           |
-| pyserial      | Serial port enumeration and communication        |
-| pypubsub      | Event pub/sub (used internally by meshtastic)    |
-| protobuf      | Meshtastic protocol buffer serialization         |
-| anyio         | Async I/O support                                |
+| Package        | Purpose                                          |
+|----------------|--------------------------------------------------|
+| textual ≥ 0.80 | TUI framework (rendering, widgets, key bindings) |
+| meshtastic     | Meshtastic Python library (serial/TCP/BLE)       |
+| bleak          | Bluetooth BLE scanning                           |
+| pyserial       | Serial port enumeration and communication        |
+| pypubsub       | Event pub/sub (used internally by meshtastic)    |
+| protobuf       | Meshtastic protocol buffer serialization         |
+| anyio          | Async I/O support                                |
 
-Python 3.11 or newer is required.
+Python 3.11 or newer is required (Python 3.9 on Pi Zero W via system Python is
+sufficient).
 
 ---
 
 ## 2. Updating
 
-```
+```bash
 bash update.sh
 ```
 
 `update.sh` will:
 
-1. Warn you if there are uncommitted local changes before pulling
+1. Warn if there are uncommitted local changes before pulling
 2. Run `git pull --ff-only` from the tracked remote branch
 3. Print a changelog of commits since the last update
 4. Re-run `pip install` only if `requirements.txt` changed
-5. Re-install the local package to pick up any source changes
+5. Re-install the local package to pick up source changes
 6. Ensure all launch scripts are executable
 
 ---
@@ -124,62 +155,96 @@ TUI automatically — no changes to MeshTTY's Python code are needed.
 # macOS
 brew install --cask cool-retro-term
 
-# Raspberry Pi OS / Ubuntu
+# Raspberry Pi OS / Ubuntu / DietPi
 sudo apt install cool-retro-term
 ```
 
-`install.sh` will offer to do this for you.
+The installers (`install.sh` and `install-pi.sh`) will offer to do this for you.
+
+### OpenGL driver requirement (Raspberry Pi)
+
+cool-retro-term's shaders require the `vc4-kms-v3d` OpenGL driver on all Pi
+models, including the Pi Zero W and Zero 2 W.  `install-pi.sh` checks for
+this and offers to add it to `/boot/config.txt`.  A reboot is required after
+enabling it.
+
+GPU memory must be at least 64 MB.  DietPi defaults to `gpu_mem=16` — the
+installer will detect this and offer to raise it.
 
 ### Import a MeshTTY CRT profile
 
-Two profiles tuned for MeshTTY's TUI are included in `assets/crt-profiles/`:
-
-| File | Appearance |
-|------|------------|
-| `meshtty-amber.json` | Warm amber phosphor on black — classic 1970s terminal |
-| `meshtty-phosphor.json` | Green phosphor on black — classic 1980s terminal |
-
+Bundled profiles in `assets/crt-profiles/` are tuned for MeshTTY's TUI.
 Import one **once** after installing cool-retro-term:
 
 1. Open cool-retro-term
 2. **Settings → Profiles → Import**
-3. Select `assets/crt-profiles/meshtty-amber.json` (or `meshtty-phosphor.json`)
+3. Choose the profile for your hardware
 
-Both profiles use:
-- Terminus (TTF) font for sharp, readable monospace characters
-- Low flicker and short phosphor burnin — readable for long sessions
-- Medium bloom, subtle scanlines, and gentle screen curvature
+| File | Best for | Appearance |
+|------|----------|------------|
+| `meshtty-amber.json` | Pi 3/4/5, macOS, Ubuntu | Warm `#ff8100` amber — full CRT effects |
+| `meshtty-phosphor.json` | Pi 3/4/5, macOS, Ubuntu | `#0ccc68` green — full CRT effects |
+| `meshtty-zero.json` | **Pi Zero W / Zero 2 W** | Green phosphor, all GPU-heavy effects disabled |
+
+`meshtty-zero.json` disables scanlines, screen curvature, static noise,
+phosphor burnin, and flicker — leaving only the phosphor color and minimal
+bloom.  This is the right choice for VideoCore IV on Zero hardware where GPU
+headroom is limited.
 
 ### Launch with cool-retro-term
 
+**macOS / Ubuntu:**
 ```bash
 ./launch.sh          # auto-selects cool-retro-term if installed
 ./meshtty-crt.sh     # explicit cool-retro-term launcher
 ```
 
-The CRT effects (bloom, scanlines, curvature) are rendered entirely by
-cool-retro-term.  MeshTTY's Textual themes provide the phosphor color
-palette so the UI colours match the CRT profile.
+**Raspberry Pi:**
+```bash
+./launch-pi.sh       # context-aware: plain terminal over SSH, CRT kiosk on tty
+```
+
+The CRT effects are rendered entirely by cool-retro-term.  MeshTTY's Textual
+themes provide the phosphor color palette so the UI colours match the CRT
+profile.
 
 ---
 
 ## 4. Running MeshTTY
 
-`launch.sh` is the recommended entry point.  It auto-detects cool-retro-term
-and uses it if installed, otherwise falls back to a plain terminal.
+### Raspberry Pi
+
+`launch-pi.sh` is the recommended entry point.  It detects the runtime context
+and chooses the appropriate launcher automatically:
+
+| Context | What happens |
+|---------|-------------|
+| SSH session | Runs in the plain terminal |
+| `$DISPLAY` already set (inside X) | Launches cool-retro-term fullscreen |
+| Physical tty, X + openbox available | Starts X → openbox → cool-retro-term fullscreen |
+| Physical tty, no X | Runs in the plain terminal |
+
+```bash
+./launch-pi.sh
+./launch-pi.sh --bot --log    # pass flags through
+```
+
+### macOS / Ubuntu
+
+`launch.sh` auto-detects cool-retro-term and uses it if installed:
 
 ```bash
 ./launch.sh                # auto-detect
 ./launch.sh --plain        # force plain terminal
 ./launch.sh --crt          # force cool-retro-term (errors if not installed)
-./launch.sh --bot --log    # pass flags through to MeshTTY
+./launch.sh --bot --log    # pass flags through
 ```
 
-You can also run the launchers directly:
+### Direct launchers
 
 ```bash
-./meshtty.sh               # plain terminal (generated by install.sh)
-./meshtty-crt.sh           # cool-retro-term
+./meshtty.sh               # plain terminal (generated by installer)
+./meshtty-crt.sh           # cool-retro-term (macOS / Ubuntu)
 python -m meshtty.main     # direct, using active virtualenv
 ```
 
@@ -190,24 +255,20 @@ automatically to the **Main Screen**.
 
 ## 5. Command-Line Flags
 
-```
-./launch.sh [--plain|--crt] [meshtty flags]
-```
-
 `--plain` and `--crt` are consumed by `launch.sh`.  All other flags are
 passed through to MeshTTY:
 
-| Flag       | Description                                                  |
-|------------|--------------------------------------------------------------|
-| `--debug`  | Enable DEBUG-level logging to `/tmp/meshtty.log`.            |
-| `--bot`    | Enable the DM slash-command bot (see section 7.6).           |
-| `--log`    | Log all inbound and outbound messages to `/tmp/meshtty-messages.log`. |
-| `--noargs` | Clear saved startup flags and launch with no flags active.   |
-| `-h`       | Print help and exit.                                         |
+| Flag       | Description                                                          |
+|------------|----------------------------------------------------------------------|
+| `--debug`  | Enable DEBUG-level logging to `/tmp/meshtty.log`.                    |
+| `--bot`    | Enable the DM slash-command bot (see section 7.6).                   |
+| `--log`    | Log all inbound and outbound messages to `/tmp/meshtty-messages.log`.|
+| `--noargs` | Clear saved startup flags and launch with no flags active.           |
+| `-h`       | Print help and exit.                                                 |
 
 Flags are persisted across reboots.  The last set of flags used is saved to
-`~/.config/meshtty/last_flags` and replayed automatically on the next launch
-(unless new flags are passed explicitly, or `--noargs` is used to clear them).
+`~/.config/meshtty/last_flags` and replayed on the next launch unless new
+flags are passed explicitly or `--noargs` is used.
 
 ---
 
@@ -244,20 +305,18 @@ so the same transport and address are pre-filled on the next launch.
 ### Auto-connect
 
 If a device was remembered from a previous session, the connection screen
-starts a 5-second countdown and connects automatically.  The status line
-shows "Connecting in Ns… (press any key to cancel)".  Press any key, switch
-tabs, or click a button to cancel and configure manually.
+starts a 5-second countdown and connects automatically.  Press any key, switch
+tabs, or click a button to cancel.
 
 ### Status messages
 
-- A status line shows progress: "Connecting…", "Connected — downloading
-  nodes: …", "Download complete (N nodes) — waiting for radio confirmation…",
-  "Connected! (N nodes loaded)".
-- A red error line shows the failure reason if a connection attempt fails.
+Progress is shown in a status line: "Connecting…", "Connected — downloading
+nodes: …", "Download complete…", "Connected! (N nodes loaded)".  Errors appear
+in red below it.
 
-> **Note:** On busy networks (many nodes), the app transitions to the Main
-> Screen as soon as the initial radio handshake completes.  Remaining node
-> records continue to arrive in the background.
+> **Note:** On busy networks, the app transitions to the Main Screen as soon
+> as the initial radio handshake completes.  Node records continue arriving
+> in the background.
 
 ---
 
@@ -276,173 +335,94 @@ plus a compose bar at the bottom.
 
 #### Message display
 
-Messages are displayed in a fixed-80-column terminal style:
-
 ```
 HH:MM prefix: message text
 ```
 
-- **Incoming broadcasts** — displayed flush with the left margin, labelled
-  with the channel name (e.g. `Primary`, `LongFast`).
-- **Incoming direct messages** — labelled with the sender's short name.
-- **Outgoing messages** — indented by two spaces, displayed in a brighter
-  accent color.
-- Lines longer than 80 characters wrap aligned under the message text.
+- **Incoming broadcasts** — labelled with the channel name (`Primary`, `LongFast`, etc.)
+- **Incoming direct messages** — labelled with the sender's short name
+- **Outgoing messages** — indented two spaces, displayed in accent color
+- Long lines wrap aligned under the message text
 
 #### Compose bar
 
-The input field is pre-filled with the last active prefix (e.g. `Primary: `).
-You can type and send as-is, or edit the prefix to target a different channel
-or a specific node's short name.  Format:
+Edit the prefix to target a channel or node short name, then type your message:
 
 ```
 prefix: your message text
 ```
 
-- If the prefix matches a configured channel name → sent as a broadcast on
-  that channel.
-- If the prefix matches a node short name → sent as a direct message to that
-  node.
-- Press **Enter** or click **SEND** to transmit.
+- Prefix matches a channel name → broadcast on that channel
+- Prefix matches a node short name → direct message to that node
+- Press **Enter** or click **SEND**
 
 #### Scrolling
 
-- **Up / Down arrows** scroll the message history one line at a time.
-- **PageUp / PageDown** scroll a full screen at a time.
-- Scrolling works regardless of whether focus is on the message area or the
-  compose input.
+Up/Down arrows and PageUp/PageDown scroll the history regardless of focus.
 
 #### History
 
-The 200 most recent messages (across all channels and DMs) are loaded from
-the local database on startup.
+The 200 most recent messages are loaded from the local database on startup.
 
 ---
 
 ### 7.2 Channels Tab
 
-Lists all channels configured on the connected radio.
-
-- Click a channel name to set it as the compose prefix in the Messages tab.
-  The app switches back to Messages automatically.
-- The list is refreshed each time the tab is shown.
+Lists all channels configured on the radio.  Click a channel to set it as
+the compose prefix; the app switches to Messages automatically.
 
 ---
 
 ### 7.3 Nodes Tab
 
-A live table of all mesh nodes known to the radio.  Updates in real time as
-position, telemetry, and node-info packets are received.
+Live table of all mesh nodes.  Updates in real time.
 
 | Column     | Description                                      |
 |------------|--------------------------------------------------|
-| Short      | Node short name (4-character callsign).          |
-| Long Name  | Node long name.                                  |
-| SNR        | Last received signal-to-noise ratio (dB).        |
-| Last Heard | Time of the last packet heard (HH:MM:SS, local). |
-| Battery    | Reported battery level (%).                      |
-| Position   | GPS coordinates (lat, lon) to 4 decimal places.  |
-| HW Model   | Hardware model string.                           |
+| Short      | 4-character callsign                             |
+| Long Name  | Full node name                                   |
+| SNR        | Last signal-to-noise ratio (dB)                  |
+| Last Heard | Time of last packet (HH:MM:SS local)             |
+| Battery    | Battery level (%)                                |
+| Position   | GPS coordinates (lat, lon)                       |
+| HW Model   | Hardware model string                            |
 
-Press **Ctrl+R** to force a refresh from the radio.
-
-Click any row to open the **Node Detail Modal**.
+**Ctrl+R** forces a refresh.  Click any row to open the Node Detail Modal.
 
 ---
 
 ### 7.4 Node Detail Modal
 
-Overlay shown when you click a node row.  Displays:
-
-- Node ID, short name, long name, hardware model
-- Last SNR, last heard timestamp
-- Battery level
-- Latitude, longitude, altitude
-
-Fields show `—` when no value has been received.  Close with **CLOSE**,
-**Escape**, or **Q**.
+Shows node ID, short/long name, hardware model, last SNR, last heard,
+battery level, and GPS position.  Close with **CLOSE**, **Escape**, or **Q**.
 
 ---
 
 ### 7.5 Settings Tab
 
-#### Connection section
-
-Shows the current connection state and provides a **DISCONNECT** button that
-returns to the Connection Screen.
-
-#### Transport section
-
-| Field                  | Description                                                   |
-|------------------------|---------------------------------------------------------------|
-| Default transport      | Tab pre-selected on the Connection Screen.                    |
-| Serial port            | Last-used serial device path.                                 |
-| TCP hostname           | Last-used TCP hostname or IP.                                 |
-| TCP port               | Last-used TCP port (default 4403).                            |
-| BLE address            | Last-used BLE MAC address.                                    |
-| Auto-connect on launch | Saved but not yet active in the connection flow.              |
-
-#### Display section
-
-| Field                  | Description                                                   |
-|------------------------|---------------------------------------------------------------|
-| Show short node names  | Use 4-character short names in the Nodes table.               |
-| Theme                  | UI colour theme — applied immediately on Save.                |
-
-#### Messaging section
-
-| Field           | Description                                              |
-|-----------------|----------------------------------------------------------|
-| Default channel | Channel index shown in Settings reference (0–7).         |
-
-Click **SAVE** to apply.  The **Theme** setting takes effect immediately;
-other settings apply on the next connection.
+Configure transport, display, and messaging defaults.  Click **SAVE** to
+apply.  The **Theme** setting takes effect immediately; other settings apply
+on the next connection.
 
 ---
 
 ### 7.6 DM Slash Commands
 
-The slash-command bot is **disabled by default**.  Start MeshTTY with the
-`--bot` flag to enable it:
+Enable with `--bot`.  Incoming DMs starting with `/` trigger automatic replies:
 
-```
-./launch.sh --bot
-```
+| Command    | Response                                              |
+|------------|-------------------------------------------------------|
+| `/HELP`    | Lists all available commands                          |
+| `/INFO`    | Returns the MeshTTY repository URL                   |
+| `/JOKE`    | Returns the next joke from the joke file              |
+| `/GPIO`    | Returns exported GPIO pin states                      |
+| `/WEATHER` | Placeholder (not implemented)                         |
+| `/NEWS`    | Placeholder                                           |
+| `/NULL`    | Returns "All is nothingness"                          |
 
-When enabled, any incoming **direct message** whose text begins with `/` is
-checked against the command list.
-
-- Valid commands are displayed in the message history and an automatic reply
-  is sent back to the sender.
-- Unrecognised `/` commands are silently dropped.
-- When `--bot` is not set, DMs starting with `/` are displayed as normal
-  messages and no automatic reply is sent.
-
-#### Available commands
-
-| Command    | Response                                                          |
-|------------|-------------------------------------------------------------------|
-| `/HELP`    | Lists all available commands.                                     |
-| `/INFO`    | Returns the URL of the MeshTTY git repository.                    |
-| `/JOKE`    | Returns the next joke from the joke file (sequential, wraps).     |
-| `/GPIO`    | Returns the state of exported GPIO pins read via sysfs.           |
-| `/WEATHER` | Placeholder (feature not implemented).                            |
-| `/NEWS`    | Placeholder.                                                      |
-| `/NULL`    | Returns "All is nothingness".                                     |
-
-Commands are case-insensitive.
-
-#### Joke file setup
-
-`/JOKE` reads from a CSV file that is **not included in the repository**.
-Place the file at `meshtty/data/shortjokes.csv`.  The file must have a `Joke`
-column header on the first row.  A compatible file is available from
-[Kaggle — Short Jokes dataset](https://www.kaggle.com/datasets/abhinavmoudgil95/short-jokes).
-
-If the file is absent, `/JOKE` responds with: *No joke for you.  It's a dull day.*
-
-The joke counter is saved to `~/.config/meshtty/joke_index` after each
-`/JOKE` command and restored on the next run.
+Commands are case-insensitive.  `/JOKE` requires `meshtty/data/shortjokes.csv`
+(not included — compatible file at
+[Kaggle Short Jokes dataset](https://www.kaggle.com/datasets/abhinavmoudgil95/short-jokes)).
 
 ---
 
@@ -456,25 +436,25 @@ The joke counter is saved to `~/.config/meshtty/joke_index` after each
 
 ### Main Screen
 
-| Key       | Action                                        |
-|-----------|-----------------------------------------------|
-| F1        | Help — show keyboard shortcut reference       |
-| Ctrl+T    | Switch to MESSAGES tab                        |
-| Ctrl+L    | Switch to CHANNELS tab                        |
-| Ctrl+N    | Switch to NODES tab                           |
-| Ctrl+S    | Switch to SETTINGS tab                        |
-| ↑ / ↓    | Scroll message history up / down one line     |
-| PgUp/PgDn | Scroll message history up / down one screen   |
-| Ctrl+R    | Refresh node table from radio                 |
-| Ctrl+D    | Disconnect and return to Connection Screen    |
-| Ctrl+Q    | Quit                                          |
+| Key       | Action                                     |
+|-----------|--------------------------------------------|
+| F1        | Help overlay                               |
+| Ctrl+T    | Switch to MESSAGES tab                     |
+| Ctrl+L    | Switch to CHANNELS tab                     |
+| Ctrl+N    | Switch to NODES tab                        |
+| Ctrl+S    | Switch to SETTINGS tab                     |
+| ↑ / ↓    | Scroll message history one line            |
+| PgUp/PgDn | Scroll message history one screen          |
+| Ctrl+R    | Refresh node table                         |
+| Ctrl+D    | Disconnect → Connection Screen             |
+| Ctrl+Q    | Quit                                       |
 
 ### Node Detail Modal
 
-| Key    | Action      |
-|--------|-------------|
-| Escape | Close modal |
-| Q      | Close modal |
+| Key    | Action |
+|--------|--------|
+| Escape | Close  |
+| Q      | Close  |
 
 ---
 
@@ -482,8 +462,7 @@ The joke counter is saved to `~/.config/meshtty/joke_index` after each
 
 **Location:** `~/.config/meshtty/config.json`
 
-Created automatically on first run.  Edit with any text editor while MeshTTY
-is not running.
+Created automatically on first run.
 
 ```json
 {
@@ -494,26 +473,26 @@ is not running.
   "last_ble_address": "",
   "auto_connect": true,
   "log_level": "WARNING",
-  "db_path": "/home/<user>/.config/meshtty/messages.db",
+  "db_path": "~/.config/meshtty/messages.db",
   "default_channel": 0,
   "node_short_name_display": true,
   "theme": "crt-amber"
 }
 ```
 
-| Key                       | Type    | Default                         | Description                         |
-|---------------------------|---------|---------------------------------|-------------------------------------|
-| `default_transport`       | string  | `"serial"`                      | `"serial"`, `"tcp"`, or `"ble"`.   |
-| `last_serial_port`        | string  | `""`                            | Serial device path.                 |
-| `last_tcp_host`           | string  | `""`                            | TCP hostname or IP.                 |
-| `last_tcp_port`           | integer | `4403`                          | TCP port number.                    |
-| `last_ble_address`        | string  | `""`                            | BLE MAC address.                    |
-| `auto_connect`            | boolean | `true`                          | Start auto-connect countdown if a device is remembered. |
-| `log_level`               | string  | `"WARNING"`                     | `"DEBUG"`, `"INFO"`, `"WARNING"`, or `"ERROR"`. |
-| `db_path`                 | string  | `~/.config/meshtty/messages.db` | Path to the SQLite database.        |
-| `default_channel`         | integer | `0`                             | Messaging default channel (0–7).   |
-| `node_short_name_display` | boolean | `true`                          | Use short names in the Nodes table. |
-| `theme`                   | string  | `"crt-amber"`                   | UI theme (see section 11).          |
+| Key                       | Type    | Default       | Description                          |
+|---------------------------|---------|---------------|--------------------------------------|
+| `default_transport`       | string  | `"serial"`    | `"serial"`, `"tcp"`, or `"ble"`     |
+| `last_serial_port`        | string  | `""`          | Serial device path                   |
+| `last_tcp_host`           | string  | `""`          | TCP hostname or IP                   |
+| `last_tcp_port`           | integer | `4403`        | TCP port                             |
+| `last_ble_address`        | string  | `""`          | BLE MAC address                      |
+| `auto_connect`            | boolean | `true`        | Start countdown if device remembered |
+| `log_level`               | string  | `"WARNING"`   | `DEBUG`, `INFO`, `WARNING`, `ERROR`  |
+| `db_path`                 | string  | *(see above)* | SQLite database path                 |
+| `default_channel`         | integer | `0`           | Default channel index (0–7)          |
+| `node_short_name_display` | boolean | `true`        | Use short names in Nodes table       |
+| `theme`                   | string  | `"crt-amber"` | UI theme (see section 11)            |
 
 ---
 
@@ -521,46 +500,41 @@ is not running.
 
 **Location:** `~/.config/meshtty/messages.db`
 
-SQLite database created automatically.  Query with any SQLite tool.
+SQLite database created automatically.
 
 ### `messages` table
 
 | Column           | Type    | Description                                        |
 |------------------|---------|----------------------------------------------------|
-| `id`             | INTEGER | Auto-increment primary key.                        |
-| `packet_id`      | TEXT    | Meshtastic packet ID (NULL for sent messages).     |
-| `from_id`        | TEXT    | Sender node ID string (e.g. `!abcd1234`).          |
-| `to_id`          | TEXT    | Recipient node ID or `^all` for broadcast.         |
-| `channel`        | INTEGER | Channel index (0–7).                               |
-| `text`           | TEXT    | Message text.                                      |
-| `rx_time`        | INTEGER | Unix timestamp (seconds).                          |
-| `is_mine`        | INTEGER | `1` if sent by this device, `0` if received.       |
-| `display_prefix` | TEXT    | Human-readable prefix stored at send/receive time. |
-
-The history view loads the 200 most recent messages on startup.
+| `id`             | INTEGER | Auto-increment primary key                         |
+| `packet_id`      | TEXT    | Meshtastic packet ID (NULL for sent messages)      |
+| `from_id`        | TEXT    | Sender node ID (e.g. `!abcd1234`)                  |
+| `to_id`          | TEXT    | Recipient node ID or `^all`                        |
+| `channel`        | INTEGER | Channel index (0–7)                                |
+| `text`           | TEXT    | Message text                                       |
+| `rx_time`        | INTEGER | Unix timestamp (seconds)                           |
+| `is_mine`        | INTEGER | `1` = sent, `0` = received                        |
+| `display_prefix` | TEXT    | Human-readable prefix at send/receive time         |
 
 ### `nodes` table
 
-| Column       | Type    | Description                                   |
-|--------------|---------|-----------------------------------------------|
-| `node_id`    | TEXT    | Primary key.  Node ID string.                 |
-| `short_name` | TEXT    | 4-character callsign.                         |
-| `long_name`  | TEXT    | Full node name.                               |
-| `hw_model`   | TEXT    | Hardware model string.                        |
-| `last_snr`   | REAL    | Last signal-to-noise ratio (dB).              |
-| `last_lat`   | REAL    | Last latitude.                                |
-| `last_lon`   | REAL    | Last longitude.                               |
-| `last_alt`   | INTEGER | Last altitude (metres).                       |
-| `battery`    | INTEGER | Battery level (%).                            |
-| `last_heard` | INTEGER | Unix timestamp of last received packet.       |
-| `updated_at` | INTEGER | Unix timestamp of last database write.        |
-
-Useful queries:
+| Column       | Type    | Description                             |
+|--------------|---------|-----------------------------------------|
+| `node_id`    | TEXT    | Primary key                             |
+| `short_name` | TEXT    | 4-character callsign                    |
+| `long_name`  | TEXT    | Full node name                          |
+| `hw_model`   | TEXT    | Hardware model string                   |
+| `last_snr`   | REAL    | Last SNR (dB)                           |
+| `last_lat`   | REAL    | Last latitude                           |
+| `last_lon`   | REAL    | Last longitude                          |
+| `last_alt`   | INTEGER | Last altitude (metres)                  |
+| `battery`    | INTEGER | Battery level (%)                       |
+| `last_heard` | INTEGER | Unix timestamp of last packet           |
+| `updated_at` | INTEGER | Unix timestamp of last database write   |
 
 ```sql
 -- All messages, newest first
-SELECT datetime(rx_time,'unixepoch','localtime') AS time,
-       display_prefix, text
+SELECT datetime(rx_time,'unixepoch','localtime') AS time, display_prefix, text
 FROM messages ORDER BY rx_time DESC LIMIT 50;
 
 -- All known nodes
@@ -571,88 +545,76 @@ SELECT node_id, short_name, long_name, battery, last_snr FROM nodes;
 
 ## 11. Themes
 
-Three built-in themes, selectable from SETTINGS → Theme.  Applied immediately
-on Save; persisted in `config.json`.
+Three built-in themes selectable from SETTINGS → Theme.  Each is drawn from
+a cool-retro-term color profile — pair them for the full effect.
 
-Each theme is drawn from a cool-retro-term color profile.  For the full CRT
-effect, pair the Textual theme with the matching cool-retro-term profile
-(see section 3).
-
-| Config value   | Label          | cool-retro-term profile | Appearance                              |
+| Config value   | Label          | CRT profile             | Appearance                              |
 |----------------|----------------|-------------------------|-----------------------------------------|
-| `crt-amber`    | Amber          | Default Amber           | Warm `#ff8100` amber on black. **Default.** |
-| `crt-phosphor` | Green Phosphor | Monochrome Green        | Classic `#0ccc68` green on black.       |
-| `crt-ibm`      | IBM VGA        | IBM VGA 8×16            | Cool `#c0c0c0` grey on black.           |
+| `crt-amber`    | Amber          | meshtty-amber.json      | Warm `#ff8100` amber on black. **Default.** |
+| `crt-phosphor` | Green Phosphor | meshtty-phosphor.json   | Classic `#0ccc68` green on black        |
+| `crt-ibm`      | IBM VGA        | *(no dedicated profile)*| Cool `#c0c0c0` grey on black            |
+
+On Pi Zero W / Zero 2 W, pair any theme with `meshtty-zero.json` in
+cool-retro-term rather than the full-effects profiles.
 
 ---
 
 ## 12. Debug Logging
 
-```
-./launch.sh --debug
+```bash
+./launch-pi.sh --debug    # Pi
+./launch.sh --debug       # macOS / Ubuntu
 tail -f /tmp/meshtty.log
 ```
 
-In normal operation the log level is controlled by `log_level` in config
-(default `"WARNING"`).  Only warnings and errors are written to the log file.
+### Common errors
 
-### Common errors in the log
-
-| Error                                                           | Likely cause                                      |
-|-----------------------------------------------------------------|---------------------------------------------------|
-| `PermissionError: [Errno 13] ... '/dev/ttyUSB0'`               | User not in the `dialout` group — see section 13. |
-| `serial.serialutil.SerialException: could not open port`       | Port path wrong or device not plugged in.         |
-| `ConnectionRefusedError`                                        | TCP host/port wrong or node unreachable.          |
-| `_waitConnected timed out but N nodes present`                 | Noisy serial stream; transport forces connection and proceeds. |
-| `waitForConfig timed out but myInfo and N nodes present`       | Radio config incomplete; channels/localConfig may be missing. |
+| Error | Likely cause |
+|-------|-------------|
+| `PermissionError: [Errno 13] ... '/dev/ttyUSB0'` | Not in `dialout` group — see section 13 |
+| `serial.serialutil.SerialException: could not open port` | Wrong port or device not plugged in |
+| `ConnectionRefusedError` | TCP host/port wrong or node unreachable |
+| `_waitConnected timed out but N nodes present` | Noisy serial stream — transport forces connection and proceeds |
+| `waitForConfig timed out but myInfo and N nodes present` | Incomplete radio config — usually harmless |
 
 ---
 
 ## 13. Serial Port Permissions
 
-### Linux (Raspberry Pi OS and Ubuntu)
+### Linux (Raspberry Pi OS, DietPi, Ubuntu)
 
-```
+```bash
 sudo usermod -aG dialout $USER
 ```
 
 Log out and back in.  Verify with `groups` — output should include `dialout`.
 
-`install.sh` handles this automatically.
+Both `install.sh` and `install-pi.sh` handle this automatically.
 
 ### macOS
 
-No group membership is required.  Serial devices appear as
-`/dev/cu.usbserial-XXXX`, `/dev/cu.SLAB_USBtoUART`, or similar.
-Run `ls /dev/cu.*` with the radio plugged in to find the correct path.
+No group membership required.  Serial devices appear as `/dev/cu.usbserial-XXXX`
+or `/dev/cu.SLAB_USBtoUART`.  Run `ls /dev/cu.*` with the radio plugged in.
 
 ---
 
 ## 14. Known Issues & Missing Features
 
-This is a pre-alpha release.  The following are known to be broken or absent:
-
 ### Confirmed bugs
 
 - **`display_prefix` missing from old database rows** — Messages stored before
-  this version have an empty `display_prefix` column; they fall back to
-  displaying the raw `from_id` node string.
+  this version fall back to displaying the raw `from_id` node string.
 
 ### Not yet implemented
 
-- **Channel switching confirmation** — Clicking a channel in the Channels tab
-  switches the compose prefix but does not visually confirm which channel is
-  active.
-- **Message acknowledgement display** — No indication of whether the radio
-  acknowledged delivery.
-- **Persistent compose prefix** — The compose bar prefix resets to the first
-  channel on each session start and on each received message.
-- **BLE transport** — Largely untested.
-- **Node position on map** — No map view.
-- **Channel creation / management** — Read-only channel display only.
-- **Firmware version / radio config display** — Not shown anywhere.
-- **Notification / alert on new message** — No alert when a new message
-  arrives on a non-active tab.
+- Channel switching confirmation
+- Message acknowledgement display
+- Persistent compose prefix across sessions
+- BLE transport (largely untested)
+- Node position map view
+- Channel creation / management
+- Firmware version / radio config display
+- New message notification on non-active tab
 
 ---
 
@@ -660,31 +622,17 @@ This is a pre-alpha release.  The following are known to be broken or absent:
 
 ### Slow connection or hangs during node download
 
-The app transitions to the Main Screen as soon as the initial radio handshake
-completes.  On very busy networks the meshtastic library may still time out
-waiting for the full radio config.  Run with `--debug` and watch the log.  If
-you see:
-
-```
-_waitConnected timed out but N nodes present — forcing connected state
-```
-
-or
-
-```
-waitForConfig timed out but myInfo and N nodes present — proceeding without full config
-```
-
-the transport forced a connection after a timeout.  This is usually harmless —
-node records continue arriving after the transition.  If the app is completely
-stuck, quit (Ctrl+Q) and reconnect.
+Run with `--debug` and watch the log.  Timeouts like
+`_waitConnected timed out but N nodes present` are usually harmless — the
+transport forces a connection and node records continue arriving.  If
+completely stuck, quit (Ctrl+Q) and reconnect.
 
 ### Serial device detected but connection fails
 
-1. Run with `--debug` and check `/tmp/meshtty.log`.
-2. Confirm permissions (section 13).
-3. Try unplugging and re-plugging the USB cable.
-4. Test with the meshtastic CLI: `meshtastic --port /dev/ttyUSB0 --info`
+1. Run with `--debug`, check `/tmp/meshtty.log`
+2. Confirm `dialout` group membership (section 13)
+3. Unplug and re-plug the USB cable
+4. Test with the CLI: `meshtastic --port /dev/ttyUSB0 --info`
 
 ### No serial devices in the auto-scan list
 
@@ -699,81 +647,144 @@ The scanner filters by USB vendor ID.  Supported chips:
 
 If your adapter uses a different chip, enter the port path manually.
 
-### BLE scan finds no devices
+### BLE issues on Pi Zero W
 
-- Ensure the node has BLE enabled in its firmware settings.
-- Ensure the host has a working Bluetooth adapter (`hciconfig` on Linux).
+The Pi Zero W's combined Wi-Fi/BT chip (CYW43438) can cause interference
+between Wi-Fi and BLE.  If BLE scanning fails or connections drop:
+
+- Ensure BlueZ is version 5.55 or newer: `bluetoothctl --version`
+- Try disabling Wi-Fi while using BLE: `rfkill block wifi`
+- Use serial or TCP transport instead — they are more reliable on Zero hardware
+
+### cool-retro-term fails to open on Pi
+
+Most likely cause: OpenGL driver not configured.  Check:
+
+```bash
+grep -E "vc4|dtoverlay" /boot/config.txt
+```
+
+If `vc4-kms-v3d` is not present, add it and reboot:
+
+```bash
+echo "dtoverlay=vc4-kms-v3d" | sudo tee -a /boot/config.txt
+sudo reboot
+```
+
+Also check `gpu_mem`:
+
+```bash
+grep gpu_mem /boot/config.txt
+```
+
+If it is set to less than 64, change it to `gpu_mem=64` and reboot.
+DietPi defaults to `gpu_mem=16` — `install-pi.sh` will detect and fix this.
+
+### Pi Zero W: pip install fails or takes very long
+
+The Pi Zero W (ARMv6, single-core 1 GHz) is slow to compile Python packages.
+Expected install time is 30–90 minutes.  Do not interrupt pip once it starts.
+
+If pip fails with a `grpcio` or "illegal instruction" error, `install-pi.sh`
+handles this automatically by retrying without `grpcio` (meshtastic ≥ 2.5 no
+longer requires it).  If running pip manually:
+
+```bash
+pip install textual meshtastic pyserial bleak pypubsub protobuf anyio
+```
+
+### DietPi: swap too low for pip install
+
+DietPi's zram swap may not be enough for compiling packages on a Zero W.
+Increase it via:
+
+```
+dietpi-config → Performance Options → Swap
+```
+
+Set to 1024 MB for the install, then reduce back to 256 MB afterward to
+preserve SD card write life.
 
 ### Config file ignored or reset
 
-Verify it is valid JSON:
-
-```
+```bash
 python3 -m json.tool ~/.config/meshtty/config.json
 ```
 
 If `"theme"` contains an unrecognised value, the app silently resets it to
 `crt-amber`.
 
-### cool-retro-term not found when running meshtty-crt.sh
-
-Install cool-retro-term (see section 3), or use `./launch.sh --plain` to run
-in a plain terminal.
-
 ---
 
 ## 16. Headless / Kiosk Operation (Raspberry Pi)
 
-MeshTTY is designed to run as a full-screen kiosk app on a headless Pi
-connected to a physical display — no desktop environment required.
+MeshTTY is designed to run as a full-screen kiosk on a headless Pi connected
+to a physical display — no desktop environment required.
 
 ### Setup
 
-1. Configure the Pi for **console auto-login** (e.g. `raspi-config` →
-   System Options → Boot / Auto Login → Console Autologin).
-2. Run `install.sh` on the Pi and answer **Y** when asked about auto-launch.
+1. Configure console auto-login:
+   - **Raspberry Pi OS:** `sudo raspi-config` → System Options → Boot / Auto Login → Console Autologin
+   - **DietPi:** `dietpi-config` → AutoStart Options → set to `0` (console autologin), or run `sudo dietpi-autostart`
+2. Run `install-pi.sh` and answer **Y** when asked about auto-launch and cool-retro-term
 
-The installer adds a block to `~/.bash_profile` that:
-
-- Activates only on `tty1` (the physical console) — SSH sessions are
-  unaffected.
-- Sets `TERM=xterm-256color` for full colour rendering.
-- Runs MeshTTY in a restart loop so it comes back after an exit or crash.
+The installer adds a block to `~/.bash_profile`:
 
 ```bash
 # MeshTTY auto-launch on tty1 (physical Pi screen)
 if [[ "$(tty)" == "/dev/tty1" ]]; then
     export TERM=xterm-256color
     while true; do
-        /home/pi/Vibe/MeshTTY/meshtty.sh
+        /path/to/MeshTTY/launch-pi.sh
         sleep 2
     done
 fi
 ```
 
-### What happens at boot
+`launch-pi.sh` detects whether X is available and starts it if so, or falls
+back to the plain terminal — no manual configuration needed.
 
-| Step | What MeshTTY does |
-|------|-------------------|
-| Login shell starts | `~/.bash_profile` runs the restart loop |
-| `meshtty.sh` starts | Checks stdin/stdout are a TTY; exits with an error if not |
-| Serial transport configured | Waits up to 10 s for the USB device to enumerate |
-| App launches | Connection screen appears |
-| Saved device present | 5-second countdown begins; connects automatically |
-| App exits for any reason | `sleep 2`, then `meshtty.sh` restarts |
+### Boot sequence with cool-retro-term kiosk
+
+| Step | What happens |
+|------|-------------|
+| Pi boots, user auto-logs in on tty1 | `~/.bash_profile` starts restart loop |
+| `launch-pi.sh` runs | Detects X + openbox available |
+| `startx` launches | openbox starts, runs `~/.config/openbox/autostart` |
+| Autostart runs | `cool-retro-term` opens fullscreen with `meshtty.sh` inside |
+| Openbox rc.xml rule | Forces cool-retro-term fullscreen, no window decorations |
+| MeshTTY starts | Connection screen appears |
+| User quits MeshTTY | cool-retro-term closes, autostart calls `openbox --exit` |
+| X shuts down | `startx` returns to `launch-pi.sh` |
+| Restart loop fires | `sleep 2`, then everything starts again |
+
+**Emergency exit:** Ctrl+Alt+Backspace shuts down X immediately.
+
+### Boot sequence without cool-retro-term (plain terminal)
+
+| Step | What happens |
+|------|-------------|
+| Pi boots, user auto-logs in on tty1 | `~/.bash_profile` starts restart loop |
+| `launch-pi.sh` runs | No X available — runs `meshtty.sh` directly |
+| MeshTTY starts in the console TTY | Connection screen appears |
+| App exits for any reason | `sleep 2`, then restarts |
 
 ### Troubleshooting a headless Pi
 
-SSH in from another machine to investigate without disturbing the console:
+SSH in to investigate without disturbing the console:
 
-```
-ssh pi@<pi-hostname>
+```bash
+ssh user@<pi-hostname>
 tail -f /tmp/meshtty.log
+cat /tmp/meshtty-x.log      # X server errors if cool-retro-term kiosk fails
 ```
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| Black screen / app not starting | User not in `dialout` group | Re-run `install.sh` or `sudo usermod -aG dialout pi` then reboot |
-| "Waiting for USB serial device…" then fails | Radio not plugged in or wrong port | Plug in radio before booting; check `dmesg \| grep tty` |
-| App starts but auto-connect does not fire | No saved device in config | Connect once manually with **Remember this device** checked |
-| App crashes immediately | `TERM` not set or `dumb` | Ensure `~/.bash_profile` sets `TERM=xterm-256color` |
+| Black screen / nothing starts | User not in `dialout` group | `sudo usermod -aG dialout $USER` then reboot |
+| "Waiting for USB serial device…" then fails | Radio not plugged in | Plug in before booting; check `dmesg \| grep tty` |
+| Auto-connect does not fire | No saved device | Connect once manually with **Remember this device** checked |
+| X starts but cool-retro-term is blank / crashes | OpenGL driver missing or gpu_mem too low | See section 15 — add `vc4-kms-v3d` and set `gpu_mem=64` |
+| cool-retro-term opens but immediately closes | `meshtty.sh` not found or virtualenv missing | Re-run `install-pi.sh` |
+| App crashes immediately on tty | `TERM` not set | Ensure `~/.bash_profile` sets `TERM=xterm-256color` |
+| Pi Zero W install hangs for >90 min | Normal on ARMv6 | Wait — do not interrupt |
