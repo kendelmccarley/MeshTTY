@@ -64,6 +64,16 @@ else
     git log --oneline --no-decorate "${PREV_HEAD}..${NEW_HEAD}"
 fi
 
+# ── Ensure fonts-terminus is installed (needed by launch-pi.sh for font scaling)
+
+if [[ "$(uname -s)" != "Darwin" ]] && command -v dpkg &>/dev/null; then
+    if ! dpkg -l fonts-terminus &>/dev/null 2>&1; then
+        echo ""
+        echo ">>> Installing fonts-terminus (required for framebuffer font scaling)..."
+        sudo apt-get install -y fonts-terminus
+    fi
+fi
+
 # ── Refresh Python dependencies if requirements.txt changed ───────────────────
 
 source "$VENV_DIR/bin/activate"
