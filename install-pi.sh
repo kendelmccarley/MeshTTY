@@ -106,36 +106,40 @@ fi
 
 _section "[1/6] Installing base system packages..."
 
-# Warn if using a Bluetooth keyboard — bluez install may restart the BT service
-# and drop the connection briefly.
-if ls /dev/input/event* 2>/dev/null | xargs -I{} udevadm info {} 2>/dev/null \
-        | grep -qi "bluetooth" 2>/dev/null \
-   || systemctl is-active bluetooth &>/dev/null; then
-    echo ""
-    echo "  ⚠  Bluetooth keyboard detected."
-    echo "     Installing bluez may briefly drop your BT keyboard connection."
-    echo "     If you lose input, wait 10 seconds — it should reconnect."
-    echo "     Using a wired keyboard for install is recommended."
-    echo ""
-fi
+_pkg_installed() { dpkg -l "$1" 2>/dev/null | grep -q "^ii"; }
 
-sudo apt-get update -qq
-sudo apt-get install -y \
-    python3-pip \
-    python3-venv \
-    libglib2.0-dev \
-    bluetooth \
-    libbluetooth-dev \
-    bluez \
-    git \
-    fonts-terminus
+MISSING_PKGS=()
+for _pkg in python3-pip python3-venv python3-full libglib2.0-dev bluetooth libbluetooth-dev bluez git fonts-terminus; do
+    _pkg_installed "$_pkg" || MISSING_PKGS+=("$_pkg")
+done
+
+if [ ${#MISSING_PKGS[@]} -eq 0 ]; then
+    echo "    All packages already installed."
+else
+    # Warn if bluez is missing and a Bluetooth keyboard is active — install
+    # may briefly restart the BT service and drop the keyboard connection.
+    if [[ " ${MISSING_PKGS[*]} " == *" bluez "* ]]; then
+        if ls /dev/input/event* 2>/dev/null | xargs -I{} udevadm info {} 2>/dev/null \
+                | grep -qi "bluetooth" 2>/dev/null \
+           || systemctl is-active bluetooth &>/dev/null; then
+            echo ""
+            echo "  ⚠  Bluetooth keyboard detected."
+            echo "     Installing bluez may briefly drop your BT keyboard connection."
+            echo "     If you lose input, wait 10 seconds — it should reconnect."
+            echo "     Using a wired keyboard for install is recommended."
+            echo ""
+        fi
+    fi
+
+    echo "    Installing: ${MISSING_PKGS[*]}"
+    sudo apt-get update -qq
+    sudo apt-get install -y "${MISSING_PKGS[@]}"
+fi
 
 sudo systemctl enable bluetooth --quiet 2>/dev/null || true
 # Only start if not already running — avoids dropping active BT connections
 systemctl is-active --quiet bluetooth \
     || sudo systemctl start bluetooth 2>/dev/null || true
-
-echo "    fonts-terminus installed (used by launch-pi.sh to scale font on physical screen)"
 
 # ── 2. Swap check ─────────────────────────────────────────────────────────────
 
@@ -169,7 +173,9 @@ fi
 # ── 3. Python virtual environment ─────────────────────────────────────────────
 
 _section "[3/6] Creating Python virtualenv at $VENV_DIR..."
-python3 -m venv "$VENV_DIR"
+# --copies ensures the venv gets its own pip binary, avoiding the
+# "externally-managed-environment" error on Bookworm / Trixie (PEP 668).
+python3 -m venv --copies "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 echo "    Python: $(python --version)  Arch: $(uname -m)"
 
