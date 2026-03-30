@@ -281,18 +281,23 @@ class ConnectionScreen(Screen):
     def _on_download_complete(self) -> None:
         if not self._connecting:
             return
-        self._download_done = True
         n = self._download_dots
         label = f"{n} node{'s' if n != 1 else ''}"
         self._set_status(
             f"Download complete ({label}) \u2014 waiting for radio confirmation\u2026"
         )
+        self._download_done = True
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         if self._programmatic_tab_change:
             self._programmatic_tab_change = False
             return
         self._cancel_autoconnect()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Pressing Enter in any input field triggers connect."""
+        self._cancel_autoconnect()
+        self._attempt_connect()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self._cancel_autoconnect()

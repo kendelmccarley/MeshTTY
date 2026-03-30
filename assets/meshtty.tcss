@@ -303,16 +303,54 @@ ConnectionScreen {
     padding: 1 2;
 }
 
+/* Override global 1fr rules — conn-container is auto-height so 1fr → 0 */
+ConnectionScreen TabbedContent {
+    height: auto;
+    layer: default;
+}
+
+ConnectionScreen TabPane {
+    height: auto;
+}
+
+ConnectionScreen ContentSwitcher {
+    height: auto;
+}
+
+ConnectionScreen Tabs {
+    height: 1;
+}
+
+ConnectionScreen DataTable {
+    height: 5;
+    background: transparent;
+}
+
+ConnectionScreen .section-label {
+    padding: 0;
+    color: $secondary;
+    text-style: bold;
+}
+
+ConnectionScreen Input {
+    margin: 0;
+}
+
+ConnectionScreen Button {
+    margin: 0;
+    min-height: 1;
+}
+
 #status-label {
     height: 1;
-    content-align: center middle;
+    content-align: left middle;
     color: $warning;
     text-style: bold;
 }
 
 #error-label {
     height: 1;
-    content-align: center middle;
+    content-align: left middle;
     color: $error;
     text-style: bold;
 }
@@ -327,34 +365,17 @@ ConnectionScreen {
     color: $secondary;
 }
 
-.section-label {
-    padding: 1 0 0 0;
-    color: $secondary;
-    text-style: bold;
-}
-
-ConnectionScreen DataTable {
-    height: 5;
-    background: transparent;
-}
-
-ConnectionScreen .section-label {
-    padding: 0;
-}
-
-ConnectionScreen Input {
-    margin: 0;
-}
-
-ConnectionScreen Button {
-    margin: 0;
-}
-
 /* ── Global button style ──────────────────────────────────────────────────── */
 
 Button {
     min-height: 1;
     margin: 0;
+    text-style: bold;
+}
+
+.section-label {
+    padding: 0;
+    color: $secondary;
     text-style: bold;
 }
 
