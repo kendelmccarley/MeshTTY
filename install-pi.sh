@@ -156,8 +156,11 @@ fi
 
 if $INSTALL_X; then
     _section "    Installing minimal X server..."
-    sudo apt-get install -y xorg openbox x11-xserver-utils
+    sudo apt-get install -y xorg openbox x11-xserver-utils xserver-xorg-legacy
     echo "    Installed: xorg + openbox"
+    # Allow non-root users to start X on Debian Bookworm / Pi OS Bookworm
+    echo "allowed_users=anybody" | sudo tee /etc/X11/Xwrapper.config > /dev/null
+    echo "    Configured: /etc/X11/Xwrapper.config (allowed_users=anybody)"
 fi
 
 if $INSTALL_CRT; then
