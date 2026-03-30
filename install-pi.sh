@@ -238,7 +238,7 @@ fi
 
 # ── 3b. Configure X kiosk (openbox + cool-retro-term fullscreen) ──────────────
 
-if $INSTALL_CRT && ( _x_installed || $INSTALL_X ) && _openbox_installed; then
+if ( $INSTALL_CRT || _crt_installed ) && ( _x_installed || $INSTALL_X ) && _openbox_installed; then
 
     _section "[3b/8] Configuring X kiosk (openbox, cool-retro-term fullscreen)..."
 
