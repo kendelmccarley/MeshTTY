@@ -392,7 +392,8 @@ _section "[8/8] Hardware permissions and start scripts..."
 sudo usermod -aG dialout  "$USER"
 sudo usermod -aG bluetooth "$USER"
 sudo usermod -aG video     "$USER"
-echo "    Added $USER to: dialout, bluetooth, video"
+sudo usermod -aG tty       "$USER"
+echo "    Added $USER to: dialout, bluetooth, video, tty"
 echo "    NOTE: Log out and back in for these to take effect."
 
 # Generate meshtty.sh
