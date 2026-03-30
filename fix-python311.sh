@@ -8,11 +8,12 @@
 #
 # Root cause:
 #   meshtastic 2.7.x has compatibility issues with Python 3.13's protobuf runtime.
-#   The same firmware and library work fine on Python 3.11.
+#   The same firmware and library work fine on Python 3.11/3.12.
 #
 # What this script does:
-#   Step 1 — Try protobuf 4.x in the existing venv (quick fix)
-#   Step 2 — If that fails, rebuild the venv with Python 3.11 (full fix)
+#   Step 1 — Try protobuf 4.x in the existing venv (quick)
+#   Step 2 — Rebuild the venv with Python 3.11 or 3.12 (if available)
+#   Step 3 — Try older meshtastic 2.5.x (last resort, if no older Python available)
 #
 # Usage:
 #   bash fix-python311.sh [/dev/ttyUSB0]
@@ -54,6 +55,44 @@ _find_port() {
     echo ""
 }
 
+_rebuild_venv() {
+    local pybin="$1"
+    echo "    Rebuilding $VENV_DIR with $($pybin --version)..."
+    deactivate 2>/dev/null || true
+    "$pybin" -m venv "$VENV_DIR" --clear
+    source "$VENV_DIR/bin/activate"
+    pip install --upgrade pip --quiet
+
+    PIP_LOG="/tmp/meshtty-pip-fix.log"
+    if ! pip install -r "$SCRIPT_DIR/requirements.txt" --quiet 2>"$PIP_LOG"; then
+        if grep -qi "grpcio\|illegal instruction\|build wheel" "$PIP_LOG" 2>/dev/null; then
+            echo "    ARMv6: retrying without grpcio..."
+            grep -v "^grpcio" "$SCRIPT_DIR/requirements.txt" > /tmp/reqs-fix.txt
+            pip install -r /tmp/reqs-fix.txt --quiet \
+                || { echo "ERROR: pip install failed. See $PIP_LOG"; cat "$PIP_LOG"; exit 1; }
+        else
+            echo "ERROR: pip install failed."
+            cat "$PIP_LOG"
+            exit 1
+        fi
+    fi
+    pip install -e "$SCRIPT_DIR" --quiet
+    echo "    Python:     $(python --version)"
+    echo "    meshtastic: $(pip show meshtastic 2>/dev/null | grep ^Version | awk '{print $2}' || echo 'unknown')"
+    echo "    protobuf:   $(pip show protobuf  2>/dev/null | grep ^Version | awk '{print $2}' || echo 'unknown')"
+}
+
+_done_ok() {
+    echo ""
+    echo "╔══════════════════════════════════════════╗"
+    echo "║           Fix succeeded — done!          ║"
+    echo "╚══════════════════════════════════════════╝"
+    echo ""
+    echo "  Launch MeshTTY:  $SCRIPT_DIR/launch-pi.sh"
+    echo ""
+    exit 0
+}
+
 # ── Detect radio port ─────────────────────────────────────────────────────────
 
 RADIO_PORT="${1:-}"
@@ -85,108 +124,95 @@ echo "    meshtastic: $(pip show meshtastic 2>/dev/null | grep ^Version | awk '{
 echo "    protobuf:   $(pip show protobuf  2>/dev/null | grep ^Version | awk '{print $2}' || echo 'unknown')"
 echo ""
 
-# ── Step 1: Try protobuf 4.x ──────────────────────────────────────────────────
+# ── Step 1: Try protobuf 4.x in existing venv ────────────────────────────────
 
-echo ">>> [1/2] Trying protobuf 4.x in existing venv..."
+echo ">>> [1/3] Trying protobuf 4.x in existing venv..."
 pip install --quiet "protobuf==4.25.3"
 echo "    protobuf: $(pip show protobuf | grep ^Version | awk '{print $2}')"
 
-STEP1_OK=false
 if [ -n "$RADIO_PORT" ]; then
-    if _radio_test "$RADIO_PORT"; then
-        STEP1_OK=true
-    fi
+    _radio_test "$RADIO_PORT" && _done_ok
 else
     echo "    Skipping radio test (no port)."
-    STEP1_OK=false
 fi
 
-if $STEP1_OK; then
-    echo ""
-    echo "╔══════════════════════════════════════════╗"
-    echo "║    Fixed with protobuf 4.x — done!       ║"
-    echo "╚══════════════════════════════════════════╝"
-    echo ""
-    echo "  Launch MeshTTY:  $SCRIPT_DIR/launch-pi.sh"
-    echo ""
-    exit 0
-fi
-
-# ── Step 2: Rebuild venv with Python 3.11 ────────────────────────────────────
+# ── Step 2: Rebuild with Python 3.11 or 3.12 ─────────────────────────────────
 
 echo ""
-echo ">>> [2/2] Rebuilding venv with Python 3.11..."
+echo ">>> [2/3] Looking for Python 3.11 or 3.12..."
 
-if ! command -v python3.11 &>/dev/null; then
-    echo "    python3.11 not found — installing..."
-    sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+OLDER_PY=""
+for pyver in python3.11 python3.12; do
+    if command -v "$pyver" &>/dev/null; then
+        OLDER_PY="$pyver"
+        echo "    Found: $($pyver --version)"
+        break
+    fi
+done
+
+if [ -z "$OLDER_PY" ]; then
+    echo "    Not in PATH — trying apt..."
+    for pkg in python3.11 python3.12; do
+        if sudo apt-get install -y "$pkg" "${pkg}-venv" "${pkg}-dev" 2>/dev/null; then
+            OLDER_PY="${pkg/python/python}"   # e.g. python3.11
+            # normalise: pkg is already "python3.11"
+            OLDER_PY="$pkg"
+            command -v "$OLDER_PY" &>/dev/null && break || OLDER_PY=""
+        fi
+    done
 fi
 
-echo "    Python 3.11: $(python3.11 --version)"
-echo "    Rebuilding $VENV_DIR ..."
-
-deactivate 2>/dev/null || true
-python3.11 -m venv "$VENV_DIR" --clear
-source "$VENV_DIR/bin/activate"
-
-echo "    Active Python: $(python --version)"
-
-pip install --upgrade pip --quiet
-
-echo "    Installing dependencies (this may take a while on Pi Zero W)..."
-PIP_LOG="/tmp/meshtty-pip-fix.log"
-
-if ! pip install -r "$SCRIPT_DIR/requirements.txt" --quiet 2>"$PIP_LOG"; then
-    if grep -qi "grpcio\|illegal instruction\|build wheel" "$PIP_LOG" 2>/dev/null; then
-        echo "    ARMv6: retrying without grpcio..."
-        grep -v "^grpcio" "$SCRIPT_DIR/requirements.txt" > /tmp/reqs-fix.txt
-        pip install -r /tmp/reqs-fix.txt --quiet \
-            || { echo "ERROR: pip install failed. See $PIP_LOG"; cat "$PIP_LOG"; exit 1; }
+if [ -n "$OLDER_PY" ]; then
+    _rebuild_venv "$OLDER_PY"
+    if [ -n "$RADIO_PORT" ]; then
+        _radio_test "$RADIO_PORT" && _done_ok
     else
-        echo "ERROR: pip install failed."
-        cat "$PIP_LOG"
-        exit 1
+        echo ""
+        echo "    Venv rebuilt. Test manually:"
+        echo "      meshtastic --port /dev/ttyUSB0 --info"
+        _done_ok
     fi
-fi
-
-pip install -e "$SCRIPT_DIR" --quiet
-
-echo ""
-echo "    New environment:"
-echo "    Python:     $(python --version)"
-echo "    meshtastic: $(pip show meshtastic 2>/dev/null | grep ^Version | awk '{print $2}' || echo 'unknown')"
-echo "    protobuf:   $(pip show protobuf  2>/dev/null | grep ^Version | awk '{print $2}' || echo 'unknown')"
-
-# ── Final radio test ──────────────────────────────────────────────────────────
-
-STEP2_OK=false
-if [ -n "$RADIO_PORT" ]; then
-    echo ""
-    if _radio_test "$RADIO_PORT"; then
-        STEP2_OK=true
-    fi
-fi
-
-echo ""
-if $STEP2_OK; then
-    echo "╔══════════════════════════════════════════╗"
-    echo "║    Fixed with Python 3.11 — done!        ║"
-    echo "╚══════════════════════════════════════════╝"
-    echo ""
-    echo "  Launch MeshTTY:  $SCRIPT_DIR/launch-pi.sh"
 else
-    echo "╔══════════════════════════════════════════╗"
-    echo "║    Venv rebuilt — radio test inconclusive ║"
-    echo "╚══════════════════════════════════════════╝"
-    echo ""
-    if [ -z "$RADIO_PORT" ]; then
-        echo "  Test manually:"
-        echo "    source $VENV_DIR/bin/activate"
-        echo "    meshtastic --port /dev/ttyUSB0 --info"
-    else
-        echo "  Radio still failing — check /tmp/meshtty-radio-test.log"
-        echo "  The Pi 2B environment that worked may have had a different"
-        echo "  meshtastic or protobuf version. Check: pip show meshtastic protobuf"
+    echo "    python3.11/3.12 not available via apt on this OS."
+fi
+
+# ── Step 3: Try older meshtastic 2.5.x (Python 3.13 last resort) ─────────────
+
+echo ""
+echo ">>> [3/3] Trying meshtastic 2.5.x with Python 3.13 (last resort)..."
+echo "    (Older library, known stable with protobuf 4.x)"
+
+source "$VENV_DIR/bin/activate"
+pip install --quiet "meshtastic==2.5.7" "protobuf==4.25.3"
+echo "    meshtastic: $(pip show meshtastic | grep ^Version | awk '{print $2}')"
+echo "    protobuf:   $(pip show protobuf  | grep ^Version | awk '{print $2}')"
+
+if [ -n "$RADIO_PORT" ]; then
+    if _radio_test "$RADIO_PORT"; then
+        echo ""
+        echo "  NOTE: MeshTTY is pinned to meshtastic 2.5.7."
+        echo "  It will work but may lack features of newer firmware."
+        _done_ok
     fi
 fi
+
+# ── All steps failed ──────────────────────────────────────────────────────────
+
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║        All automatic fixes failed        ║"
+echo "╚══════════════════════════════════════════╝"
+echo ""
+echo "  Diagnostics:"
+echo "    cat /tmp/meshtty-radio-test.log"
+echo ""
+echo "  Manual options:"
+echo "  A) Downgrade radio firmware to 2.5.x:"
+echo "     Use Meshtastic flasher at https://flasher.meshtastic.org"
+echo ""
+echo "  B) Install Python 3.11 via pyenv (slow on Pi Zero W ~1 hr):"
+echo "     curl https://pyenv.run | bash"
+echo "     pyenv install 3.11"
+echo "     pyenv global 3.11"
+echo "     bash $SCRIPT_DIR/install-pi.sh"
 echo ""
