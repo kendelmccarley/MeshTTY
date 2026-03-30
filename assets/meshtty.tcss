@@ -334,8 +334,20 @@ ConnectionScreen {
 }
 
 ConnectionScreen DataTable {
-    height: 8;
+    height: 5;
     background: transparent;
+}
+
+ConnectionScreen .section-label {
+    padding: 0;
+}
+
+ConnectionScreen Input {
+    margin: 0;
+}
+
+ConnectionScreen Button {
+    margin: 0;
 }
 
 /* ── Global button style ──────────────────────────────────────────────────── */
