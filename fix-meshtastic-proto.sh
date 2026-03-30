@@ -67,7 +67,7 @@ echo "    protobuf:   $(pip show protobuf | grep ^Version | awk '{print $2}')"
 
 echo ""
 echo ">>> Verifying imports..."
-python -c "import meshtastic; print('    OK: meshtastic', meshtastic.__version__)"
+python -c "import meshtastic; v = getattr(meshtastic, '__version__', 'dev'); print('    OK: meshtastic', v)"
 python -c "import google.protobuf; print('    OK: protobuf', google.protobuf.__version__)"
 
 # ── Step 4: Optional radio connection test ────────────────────────────────────
