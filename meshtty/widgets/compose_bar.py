@@ -1,4 +1,4 @@
-"""ComposeBar — message input + send button."""
+"""ComposeBar — single-row message input."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from textual.widgets import Button, Input
 
 
 class ComposeBar(Widget):
-    """Text input area with a Send button."""
+    """Text input area with a Send button, one row tall."""
 
     class SendRequested(Message):
         """Posted when the user submits a message."""
@@ -23,22 +23,33 @@ class ComposeBar(Widget):
     DEFAULT_CSS = """
     ComposeBar {
         dock: bottom;
-        height: 3;
-        background: $surface;
-        border-top: solid $primary;
+        height: 1;
+        background: transparent;
+        padding: 0 1;
+        layer: content;
     }
     ComposeBar Horizontal {
-        height: 3;
+        height: 1;
         align: left middle;
+        background: transparent;
     }
     ComposeBar Input {
         width: 1fr;
-        height: 3;
+        height: 1;
+        background: transparent;
+        color: $primary;
+        border: none;
+        padding: 0;
     }
     ComposeBar Button {
-        width: 10;
-        min-height: 3;
+        width: 8;
+        height: 1;
+        min-height: 1;
         margin: 0 0 0 1;
+        background: transparent;
+        border: none;
+        color: $accent;
+        text-style: bold;
     }
     """
 
@@ -49,13 +60,12 @@ class ComposeBar(Widget):
     def compose(self) -> ComposeResult:
         with Horizontal():
             yield Input(placeholder="Type a message… (Enter to send)", id="compose-input")
-            yield Button("Send", id="send-btn", variant="primary")
+            yield Button("SEND", id="send-btn", variant="primary")
 
     def on_mount(self) -> None:
         self.query_one("#compose-input", Input).focus()
 
     def set_prefix(self, prefix: str) -> None:
-        """Update the compose prefix if the user hasn't started typing."""
         inp = self.query_one("#compose-input", Input)
         old_text = f"{self._current_prefix}: " if self._current_prefix else ""
         if inp.value in ("", old_text):

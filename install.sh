@@ -12,15 +12,13 @@
 # Run as your normal user (not root). sudo is invoked only where needed.
 #
 # After installation:
-#   ./meshtty.sh       — launch in any terminal
-#   ./meshtty-crt.sh   — launch inside cool-retro-term (if installed)
+#   ./meshtty.sh   — launch MeshTTY
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$HOME/.venv/meshtty"
 START_SCRIPT="$SCRIPT_DIR/meshtty.sh"
-CRT_SCRIPT="$SCRIPT_DIR/meshtty-crt.sh"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,7 +62,7 @@ echo ""
 
 # ── 1. System dependencies ────────────────────────────────────────────────────
 
-echo ">>> [1/7] Installing system dependencies..."
+echo ">>> [1/6] Installing system dependencies..."
 
 if $IS_MAC; then
     if ! command -v brew >/dev/null 2>&1; then
@@ -90,63 +88,10 @@ else
     sudo systemctl start  bluetooth         2>/dev/null || true
 fi
 
-# ── 2. cool-retro-term (optional) ─────────────────────────────────────────────
+# ── 2. Python virtual environment ─────────────────────────────────────────────
 
 echo ""
-echo ">>> [2/7] cool-retro-term (retro CRT terminal, optional)"
-
-_crt_installed() {
-    command -v cool-retro-term &>/dev/null \
-    || [ -d "/Applications/cool-retro-term.app" ] \
-    || [ -d "$HOME/Applications/cool-retro-term.app" ]
-}
-
-if _crt_installed; then
-    echo "    Already installed — skipping."
-elif _ask "    Install cool-retro-term for retro CRT effects?"; then
-    if $IS_MAC; then
-        echo "    Installing via Homebrew Cask..."
-        brew install --cask cool-retro-term
-    else
-        # Try apt first (available in Ubuntu universe and Pi OS repos)
-        if apt-cache show cool-retro-term &>/dev/null 2>&1; then
-            echo "    Installing via apt..."
-            sudo apt-get install -y cool-retro-term
-        else
-            # Flatpak fallback
-            echo "    cool-retro-term not found in apt — trying Flatpak..."
-            if ! command -v flatpak &>/dev/null; then
-                sudo apt-get install -y flatpak
-                sudo flatpak remote-add --if-not-exists flathub \
-                    https://flathub.org/repo/flathub.flatpakrepo
-                echo "    Flatpak installed. A reboot may be needed before the first run."
-            fi
-            flatpak install -y flathub io.github.swordfishslabs.cool-retro-term
-            # Wrap the flatpak command as 'cool-retro-term' in ~/.local/bin
-            mkdir -p "$HOME/.local/bin"
-            cat > "$HOME/.local/bin/cool-retro-term" << 'WRAPPER'
-#!/usr/bin/env bash
-exec flatpak run io.github.swordfishslabs.cool-retro-term "$@"
-WRAPPER
-            chmod +x "$HOME/.local/bin/cool-retro-term"
-            echo "    Wrapper created at ~/.local/bin/cool-retro-term"
-            echo "    Make sure ~/.local/bin is in your PATH."
-        fi
-    fi
-
-    echo ""
-    echo "    Profile import (do this once after install):"
-    echo "      Open cool-retro-term → Settings → Profiles → Import"
-    echo "      $SCRIPT_DIR/assets/crt-profiles/meshtty-amber.json     (warm amber)"
-    echo "      $SCRIPT_DIR/assets/crt-profiles/meshtty-phosphor.json  (green glow)"
-else
-    echo "    Skipped. You can install it later and use ./meshtty-crt.sh"
-fi
-
-# ── 3. Python virtual environment ─────────────────────────────────────────────
-
-echo ""
-echo ">>> [3/7] Creating Python virtualenv at $VENV_DIR..."
+echo ">>> [2/6] Creating Python virtualenv at $VENV_DIR..."
 
 # On macOS use the Homebrew python@3.11 binary explicitly, because
 # /usr/bin/python3 is the system stub (3.9) which is too old for some deps.
@@ -174,18 +119,18 @@ fi
 "$PYTHON_BIN" -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-# ── 4. Python packages ────────────────────────────────────────────────────────
+# ── 3. Python packages ────────────────────────────────────────────────────────
 
 echo ""
-echo ">>> [4/7] Installing Python dependencies..."
+echo ">>> [3/6] Installing Python dependencies..."
 pip install --upgrade pip --quiet
 pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 pip install -e "$SCRIPT_DIR" --quiet
 
-# ── 5. Verify ─────────────────────────────────────────────────────────────────
+# ── 4. Verify ─────────────────────────────────────────────────────────────────
 
 echo ""
-echo ">>> [5/7] Verifying installation..."
+echo ">>> [4/6] Verifying installation..."
 
 if python -c "import meshtastic" 2>/dev/null; then
     MESH_VER=$(python -c "import meshtastic; print(meshtastic.__version__)" 2>/dev/null || echo "unknown")
@@ -214,10 +159,10 @@ else
     exit 1
 fi
 
-# ── 6. Serial port and Bluetooth access ───────────────────────────────────────
+# ── 5. Serial port and Bluetooth access ───────────────────────────────────────
 
 echo ""
-echo ">>> [6/7] Hardware access permissions..."
+echo ">>> [5/6] Hardware access permissions..."
 
 if $IS_MAC; then
     echo "    macOS: no group changes needed."
@@ -231,12 +176,11 @@ else
     echo "    NOTE: Log out and back in for group membership to take effect."
 fi
 
-# ── 7. Generate start scripts ─────────────────────────────────────────────────
+# ── 6. Generate start script ──────────────────────────────────────────────────
 
 echo ""
-echo ">>> [7/7] Generating start scripts..."
+echo ">>> [6/6] Generating start script..."
 
-# meshtty.sh — plain terminal launcher
 cat > "$START_SCRIPT" << STARTSCRIPT
 #!/usr/bin/env bash
 # meshtty.sh — launch MeshTTY
@@ -268,6 +212,8 @@ cd "\$APP_DIR"
 
 # At boot, wait up to 10 s for a USB serial device to enumerate if serial
 # is the configured transport.  Harmless no-op once the device is present.
+# Device paths differ: Linux uses /dev/ttyUSB* and /dev/ttyACM*;
+# macOS uses /dev/cu.usbserial-*, /dev/cu.SLAB_*, /dev/cu.wchusbserial*, etc.
 CONFIG="\$HOME/.config/meshtty/config.json"
 if grep -q '"default_transport".*"serial"' "\$CONFIG" 2>/dev/null; then
     _serial_ready() {
@@ -299,10 +245,6 @@ STARTSCRIPT
 chmod +x "$START_SCRIPT"
 echo "    Created: $START_SCRIPT"
 
-# meshtty-crt.sh is already in the repo — just ensure it's executable
-chmod +x "$CRT_SCRIPT" 2>/dev/null || true
-echo "    Ready:   $CRT_SCRIPT"
-
 # ── Pi-only: optional auto-launch on tty1 ────────────────────────────────────
 
 if $IS_PI; then
@@ -312,14 +254,13 @@ if $IS_PI; then
         LAUNCH_BLOCK="
 # MeshTTY auto-launch on tty1 (physical Pi screen)
 if [[ \"\$(tty)\" == \"/dev/tty1\" ]]; then
-    export TERM=xterm-256color
     while true; do
         $START_SCRIPT
         sleep 2
     done
 fi"
-        if ! grep -q "meshtty auto-launch" "$BASH_PROFILE" 2>/dev/null \
-           && ! grep -q "meshtty auto-launch" "$HOME/.bashrc" 2>/dev/null; then
+        if ! grep -q "MeshTTY auto-launch" "$BASH_PROFILE" 2>/dev/null \
+           && ! grep -q "MeshTTY auto-launch" "$HOME/.bashrc" 2>/dev/null; then
             echo "$LAUNCH_BLOCK" >> "$BASH_PROFILE"
             echo ">>> Auto-launch block added to $BASH_PROFILE"
         else
@@ -352,17 +293,7 @@ fi
 echo "    deactivate"
 echo ""
 echo "  Launch MeshTTY:"
-echo "    $START_SCRIPT            (any terminal)"
-
-if _crt_installed; then
-    echo "    $CRT_SCRIPT        (cool-retro-term)"
-    echo ""
-    echo "  Import a CRT profile into cool-retro-term once:"
-    echo "    Settings → Profiles → Import"
-    echo "    $SCRIPT_DIR/assets/crt-profiles/meshtty-amber.json"
-    echo "    $SCRIPT_DIR/assets/crt-profiles/meshtty-phosphor.json"
-fi
-
+echo "    $START_SCRIPT"
 echo ""
 echo "  Logs: /tmp/meshtty.log"
 echo ""

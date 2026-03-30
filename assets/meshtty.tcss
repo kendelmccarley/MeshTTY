@@ -1,6 +1,7 @@
-/* meshtty.tcss — retro CRT layout & style
+/* meshtty.tcss — classic 80×24 terminal layout
  *
- * Designed to run inside cool-retro-term.
+ * All borders are drawn by TerminalFrame using box-drawing characters.
+ * Content widgets use transparent backgrounds so the frame shows through.
  * Color variables resolve to whichever crt-* theme is active.
  */
 
@@ -10,37 +11,66 @@ App {
     background: $background;
 }
 
+/* ── Terminal frame layer ─────────────────────────────────────────────────── */
+
+TerminalFrame {
+    width: 100%;
+    height: 100%;
+    background: $background;
+    layer: frame;
+}
+
+/* ── Status bar (1 row, docked top inside frame) ─────────────────────────── */
+
+ConnectionStatusBar {
+    dock: top;
+    height: 1;
+    background: transparent;
+    padding: 0 2;
+    layer: content;
+}
+
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 
 TabbedContent {
     height: 1fr;
+    background: transparent;
+    layer: content;
 }
 
 TabPane {
     height: 1fr;
     padding: 0;
+    background: transparent;
 }
 
 Tabs {
-    background: $background;
-    border-bottom: solid $primary;
+    background: transparent;
+    border-bottom: none;
+    height: 1;
 }
 
 Tab {
     color: $secondary;
     text-style: bold;
-    background: $background;
+    background: transparent;
+    padding: 0 1;
 }
 
 Tab.-active {
     color: $primary;
-    background: $surface;
-    text-style: bold;
+    background: transparent;
+    text-style: bold underline;
 }
 
 Tab:hover {
     color: $accent;
-    background: $background;
+    background: transparent;
+}
+
+ContentSwitcher {
+    background: transparent;
+    height: 1fr;
 }
 
 /* ── Messages ─────────────────────────────────────────────────────────────── */
@@ -48,18 +78,20 @@ Tab:hover {
 MessagesView {
     height: 1fr;
     layout: vertical;
+    background: transparent;
 }
 
 MessageView {
     height: 1fr;
     overflow-y: auto;
-    padding: 0 1;
-    background: $background;
+    padding: 0 2;
+    background: transparent;
 }
 
 MessageView Label {
     height: auto;
     padding: 0;
+    background: transparent;
 }
 
 MessageView .mine {
@@ -71,50 +103,59 @@ MessageView .theirs {
     color: $primary;
 }
 
-/* ── Compose bar ──────────────────────────────────────────────────────────── */
+/* ── Compose bar (1 row, docked bottom inside frame) ─────────────────────── */
 
 ComposeBar {
     dock: bottom;
-    height: 3;
-    background: $background;
-    border-top: double $primary;
+    height: 1;
+    background: transparent;
+    padding: 0 1;
+    layer: content;
 }
 
 ComposeBar Horizontal {
-    height: 3;
+    height: 1;
     align: left middle;
+    background: transparent;
 }
 
 ComposeBar Input {
     width: 1fr;
-    height: 3;
-    background: $background;
+    height: 1;
+    background: transparent;
     color: $primary;
     border: none;
+    padding: 0;
 }
 
 ComposeBar Button {
-    width: 10;
-    min-height: 3;
+    width: 8;
+    height: 1;
+    min-height: 1;
     margin: 0 0 0 1;
     text-style: bold;
+    background: transparent;
+    border: none;
+    color: $accent;
 }
 
 /* ── Channels ─────────────────────────────────────────────────────────────── */
 
 ChannelView {
     height: 1fr;
-    padding: 1 2;
+    padding: 0 2;
+    background: transparent;
 }
 
 ChannelView #channel-list {
     height: 1fr;
-    margin-top: 1;
+    background: transparent;
 }
 
 ChannelView ListItem {
-    height: 3;
+    height: 1;
     padding: 0 1;
+    background: transparent;
 }
 
 ChannelView ListItem.--highlight {
@@ -128,18 +169,21 @@ ChannelView ListItem.--highlight {
 NodeListView {
     height: 1fr;
     layout: vertical;
+    background: transparent;
 }
 
 NodeTable {
     height: 1fr;
+    background: transparent;
 }
 
 NodeTable DataTable {
     height: 1fr;
+    background: transparent;
 }
 
 DataTable > .datatable--header {
-    background: $background;
+    background: transparent;
     color: $primary;
     text-style: bold;
 }
@@ -183,7 +227,7 @@ NodeDetailModal {
 
 #close-btn {
     margin-top: 1;
-    min-height: 3;
+    min-height: 1;
     width: 100%;
     text-style: bold;
 }
@@ -193,7 +237,8 @@ NodeDetailModal {
 SettingsView {
     height: 1fr;
     overflow-y: auto;
-    padding: 1 2;
+    padding: 0 2;
+    background: transparent;
 }
 
 .section-header {
@@ -203,7 +248,7 @@ SettingsView {
 }
 
 SettingsView .row {
-    height: 4;
+    height: 3;
     layout: horizontal;
     align: left middle;
 }
@@ -216,16 +261,16 @@ SettingsView .row Label {
 SettingsView .row Input,
 SettingsView .row Select {
     width: 1fr;
-    min-height: 3;
+    min-height: 1;
 }
 
 SettingsView Switch {
-    min-height: 3;
+    min-height: 1;
 }
 
 #save-btn {
-    margin-top: 2;
-    min-height: 3;
+    margin-top: 1;
+    min-height: 1;
     width: 20;
     text-style: bold;
 }
@@ -238,7 +283,7 @@ SettingsView Switch {
 
 #disconnect-btn {
     margin-top: 1;
-    min-height: 3;
+    min-height: 1;
     width: 20;
     text-style: bold;
 }
@@ -259,21 +304,21 @@ ConnectionScreen {
 }
 
 #status-label {
-    height: 3;
+    height: 1;
     content-align: center middle;
     color: $warning;
     text-style: bold;
 }
 
 #error-label {
-    height: 3;
+    height: 1;
     content-align: center middle;
     color: $error;
     text-style: bold;
 }
 
 #remember-row {
-    height: 3;
+    height: 1;
     align: left middle;
 }
 
@@ -290,34 +335,22 @@ ConnectionScreen {
 
 ConnectionScreen DataTable {
     height: 8;
+    background: transparent;
 }
 
 /* ── Global button style ──────────────────────────────────────────────────── */
 
 Button {
-    min-height: 3;
+    min-height: 1;
     margin: 0;
     text-style: bold;
 }
 
-/* ── Status bar ───────────────────────────────────────────────────────────── */
-
-ConnectionStatusBar {
-    dock: top;
-    height: 3;
-    background: $background;
-    border-bottom: double $primary;
-}
-
-ConnectionStatusBar Horizontal {
-    height: 3;
-    align: left middle;
-}
+/* ── Status bar labels ────────────────────────────────────────────────────── */
 
 #conn-state {
     width: auto;
-    padding: 0 2;
-    min-width: 24;
+    padding: 0 1;
     color: $primary;
     text-style: bold;
 }
@@ -332,27 +365,27 @@ ConnectionStatusBar Horizontal {
 
 #channel-label {
     width: auto;
-    padding: 0 2;
+    padding: 0 1;
     color: $secondary;
 }
 
 #node-count {
     width: auto;
-    padding: 0 2;
+    padding: 0 1;
     color: $secondary;
 }
 
 #battery-label {
     width: auto;
-    padding: 0 2;
+    padding: 0 1;
     color: $secondary;
 }
 
 ConnectionStatusBar #disconnect-btn {
     dock: right;
-    margin: 0 1;
-    min-height: 3;
-    min-width: 14;
+    margin: 0;
+    min-height: 1;
+    min-width: 12;
 }
 
 /* ── Loading indicator ────────────────────────────────────────────────────── */

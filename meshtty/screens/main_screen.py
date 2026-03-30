@@ -18,10 +18,16 @@ from meshtty.screens.messages import MessagesView
 from meshtty.screens.node_detail import NodeDetailModal
 from meshtty.screens.nodes import NodeListView
 from meshtty.screens.settings import SettingsView
+from meshtty.widgets.status_bar import ConnectionStatusBar
+from meshtty.widgets.terminal_frame import TerminalFrame
+
+LAYERS = ("frame", "content")
 
 
 class MainScreen(Screen):
     """Primary application screen."""
+
+    LAYERS = LAYERS
 
     BINDINGS = [
         Binding("ctrl+q", "app.quit", "Quit"),
@@ -34,6 +40,10 @@ class MainScreen(Screen):
     ]
 
     def compose(self) -> ComposeResult:
+        # Frame drawn behind everything else
+        yield TerminalFrame(title="MeshTTY")
+        # Content layer: status bar pinned to top, tabs fill the rest
+        yield ConnectionStatusBar()
         with TabbedContent(id="main-tabs", initial="tab-messages"):
             with TabPane("MESSAGES", id="tab-messages"):
                 yield MessagesView(id="messages-view")
@@ -53,6 +63,11 @@ class MainScreen(Screen):
 
     def on_connection_established(self, event: ConnectionEstablished) -> None:
         try:
+            bar = self.query_one(ConnectionStatusBar)
+            bar.connection_state = "connected"
+        except Exception:
+            pass
+        try:
             self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
             pass
@@ -62,6 +77,11 @@ class MainScreen(Screen):
             pass
 
     def on_connection_lost(self, event: ConnectionLost) -> None:
+        try:
+            bar = self.query_one(ConnectionStatusBar)
+            bar.connection_state = "disconnected"
+        except Exception:
+            pass
         try:
             self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
@@ -74,6 +94,13 @@ class MainScreen(Screen):
             pass
 
     def on_node_updated(self, event: NodeUpdated) -> None:
+        try:
+            bar = self.query_one(ConnectionStatusBar)
+            transport = getattr(self.app, "transport", None)
+            if transport:
+                bar.node_count = len(transport.get_nodes())
+        except Exception:
+            pass
         try:
             self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
@@ -122,7 +149,6 @@ class MainScreen(Screen):
     def action_switch_tab(self, tab_id: str) -> None:
         tc = self.query_one("#main-tabs", TabbedContent)
         tc.active = tab_id
-        # Drive focus into the newly visible pane so it's immediately usable
         try:
             if tab_id == "tab-messages":
                 self.query_one("#compose-input").focus()

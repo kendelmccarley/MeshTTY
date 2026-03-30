@@ -1,4 +1,4 @@
-"""ConnectionStatusBar — docked at the top of MainScreen."""
+"""ConnectionStatusBar — single-row status line docked at top of MainScreen."""
 
 from __future__ import annotations
 
@@ -6,48 +6,57 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label
+from textual.widgets import Label
 
 
 class ConnectionStatusBar(Widget):
-    """Shows connection state, channel, node count, and local battery."""
+    """Shows connection state, channel, node count, and battery in one row."""
 
     DEFAULT_CSS = """
     ConnectionStatusBar {
         dock: top;
-        height: 3;
-        background: $surface;
-        border-bottom: solid $primary;
+        height: 1;
+        background: transparent;
+        padding: 0 2;
+        layer: content;
     }
     ConnectionStatusBar Horizontal {
-        height: 3;
+        height: 1;
         align: left middle;
+        background: transparent;
     }
     #conn-state {
         width: auto;
-        padding: 0 2;
-        min-width: 24;
+        padding: 0 1;
+        color: $primary;
+        text-style: bold;
+    }
+    #conn-state.connected {
+        color: $accent;
+    }
+    #conn-state.disconnected {
+        color: $error;
     }
     #channel-label {
         width: auto;
-        padding: 0 2;
-        color: $text-muted;
+        padding: 0 1;
+        color: $secondary;
     }
     #node-count {
         width: auto;
-        padding: 0 2;
-        color: $text-muted;
+        padding: 0 1;
+        color: $secondary;
     }
     #battery-label {
         width: auto;
-        padding: 0 2;
-        color: $text-muted;
+        padding: 0 1;
+        color: $secondary;
     }
-    #disconnect-btn {
+    #key-hints {
         dock: right;
-        margin: 0 1;
-        min-height: 3;
-        min-width: 14;
+        width: auto;
+        padding: 0 2;
+        color: $secondary;
     }
     """
 
@@ -62,27 +71,24 @@ class ConnectionStatusBar(Widget):
             yield Label("CH: —", id="channel-label")
             yield Label("NODES: 0", id="node-count")
             yield Label("", id="battery-label")
-            yield Button("DISCONNECT", id="disconnect-btn", variant="error")
+            yield Label("^Q Quit  ^D Disc  ^T/L/N/S Tabs", id="key-hints")
 
     # ------------------------------------------------------------------
-    # Watchers — called automatically when reactives change
+    # Watchers
     # ------------------------------------------------------------------
 
     def watch_connection_state(self, state: str) -> None:
         label = self.query_one("#conn-state", Label)
-        btn = self.query_one("#disconnect-btn", Button)
         if state == "connected":
             transport = getattr(self.app, "transport", None)
-            transport_str = f" // {transport}" if transport else ""
+            transport_str = f" {transport}" if transport else ""
             label.update(f"▶ ONLINE{transport_str}")
             label.add_class("connected")
             label.remove_class("disconnected")
-            btn.disabled = False
         else:
             label.update("▮ OFFLINE")
             label.remove_class("connected")
             label.add_class("disconnected")
-            btn.disabled = True
 
     def watch_channel_name(self, name: str) -> None:
         self.query_one("#channel-label", Label).update(f"CH: {name}")
@@ -92,16 +98,4 @@ class ConnectionStatusBar(Widget):
 
     def watch_battery_level(self, level: int | None) -> None:
         label = self.query_one("#battery-label", Label)
-        if level is None:
-            label.update("")
-        else:
-            label.update(f"BAT: {level}%")
-
-    # ------------------------------------------------------------------
-    # Button handler bubbles up to MainScreen
-    # ------------------------------------------------------------------
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "disconnect-btn":
-            event.stop()
-            self.app.action_disconnect()
+        label.update(f"BAT: {level}%" if level is not None else "")

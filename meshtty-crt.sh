@@ -1,102 +1,53 @@
 #!/usr/bin/env bash
-# meshtty-crt.sh — Launch MeshTTY inside cool-retro-term
+# meshtty-crt.sh — launch MeshTTY inside cool-retro-term
 #
-# Usage: ./meshtty-crt.sh [meshtty flags, e.g. --bot --log]
-#
-# On first run, prints a one-time hint to import the bundled CRT profile.
-# After that it launches cool-retro-term with meshtty.sh running inside it.
+# Usage: ./meshtty-crt.sh [meshtty flags]
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+START_SCRIPT="$SCRIPT_DIR/meshtty.sh"
 
-# ── Locate cool-retro-term ────────────────────────────────────────────────────
+if [ ! -f "$START_SCRIPT" ]; then
+    echo "ERROR: meshtty.sh not found. Run install.sh first." >&2
+    exit 1
+fi
 
-_find_crt() {
-    # Check PATH first (Linux / Homebrew)
-    if command -v cool-retro-term &>/dev/null; then
-        command -v cool-retro-term
-        return 0
-    fi
-    # macOS .app bundle locations
-    local candidates=(
-        "/Applications/cool-retro-term.app/Contents/MacOS/cool-retro-term"
+# ── Find cool-retro-term ──────────────────────────────────────────────────────
+
+CRT_BIN=""
+
+# Linux / PATH
+if command -v cool-retro-term &>/dev/null; then
+    CRT_BIN="cool-retro-term"
+fi
+
+# macOS app bundles
+if [ -z "$CRT_BIN" ]; then
+    for app_path in \
+        "/Applications/cool-retro-term.app/Contents/MacOS/cool-retro-term" \
         "$HOME/Applications/cool-retro-term.app/Contents/MacOS/cool-retro-term"
-    )
-    for p in "${candidates[@]}"; do
-        if [ -x "$p" ]; then
-            echo "$p"
-            return 0
+    do
+        if [ -x "$app_path" ]; then
+            CRT_BIN="$app_path"
+            break
         fi
     done
-    return 1
-}
+fi
 
-CRT_BIN="$(_find_crt)" || {
-    cat >&2 << 'EOF'
+# Flatpak wrapper
+if [ -z "$CRT_BIN" ] && [ -x "$HOME/.local/bin/cool-retro-term" ]; then
+    CRT_BIN="$HOME/.local/bin/cool-retro-term"
+fi
 
-  cool-retro-term not found.  Install it first:
-
-    macOS:         brew install --cask cool-retro-term
-    Raspberry Pi:  sudo apt install cool-retro-term
-    Ubuntu:        sudo apt install cool-retro-term
-
-  Then re-run:  ./meshtty-crt.sh
-
-EOF
+if [ -z "$CRT_BIN" ]; then
+    echo "ERROR: cool-retro-term not found." >&2
+    echo "" >&2
+    echo "  macOS:  brew install --cask cool-retro-term" >&2
+    echo "  Linux:  sudo apt install cool-retro-term" >&2
     exit 1
-}
-
-# ── One-time profile import hint ──────────────────────────────────────────────
-
-HINT_STAMP="$HOME/.config/meshtty/.crt-hint-shown"
-if [ ! -f "$HINT_STAMP" ]; then
-    mkdir -p "$(dirname "$HINT_STAMP")" && touch "$HINT_STAMP"
-    cat >&2 << EOF
-
-  ╔══════════════════════════════════════════════════════════════════╗
-  ║  First run: import a MeshTTY profile into cool-retro-term       ║
-  ║                                                                  ║
-  ║  Open cool-retro-term, then:                                     ║
-  ║    Settings  ▶  Profiles  ▶  Import                             ║
-  ║                                                                  ║
-  ║  Choose one of these files from the MeshTTY repo:               ║
-  ║    assets/crt-profiles/meshtty-amber.json    (warm amber)       ║
-  ║    assets/crt-profiles/meshtty-phosphor.json (green phosphor)   ║
-  ║                                                                  ║
-  ║  This message appears only once.                                 ║
-  ╚══════════════════════════════════════════════════════════════════╝
-
-EOF
 fi
-
-# ── Build inner command ───────────────────────────────────────────────────────
-# Prefer the installed meshtty.sh (has venv activation + serial wait logic).
-# Fall back to direct python invocation for dev/uninstalled environments.
-
-if [ -f "$SCRIPT_DIR/meshtty.sh" ]; then
-    INNER_CMD="$SCRIPT_DIR/meshtty.sh"
-else
-    INNER_CMD="python3 -m meshtty.main"
-fi
-
-# Safely quote caller's arguments so they survive the bash -c hand-off
-QUOTED_ARGS=""
-for arg in "$@"; do
-    QUOTED_ARGS="${QUOTED_ARGS} $(printf '%q' "$arg")"
-done
-
-# Write a temp wrapper script — avoids shell quoting issues with -e
-TMPSCRIPT="$(mktemp "${TMPDIR:-/tmp}/meshtty-crt-XXXXXX.sh")"
-chmod +x "$TMPSCRIPT"
-cat > "$TMPSCRIPT" << INNER
-#!/usr/bin/env bash
-cd $(printf '%q' "$SCRIPT_DIR")
-exec $INNER_CMD$QUOTED_ARGS
-INNER
 
 # ── Launch ────────────────────────────────────────────────────────────────────
-"$CRT_BIN" -e "$TMPSCRIPT"
-EXIT_CODE=$?
-rm -f "$TMPSCRIPT"
-exit $EXIT_CODE
+
+exec "$CRT_BIN" -e "$START_SCRIPT" "$@"

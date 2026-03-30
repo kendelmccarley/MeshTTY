@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 # launch-pi.sh — MeshTTY launcher for Raspberry Pi
 #
-# Detects the runtime context and chooses the right launch method:
-#
-#   SSH session          → plain terminal (meshtty.sh)
-#   X already running    → cool-retro-term fullscreen (if installed)
-#                          falls back to plain terminal
-#   tty, X available     → start X → openbox → cool-retro-term fullscreen
-#   tty, no X            → plain terminal (meshtty.sh)
+# On the framebuffer console (physical screen, not SSH) this script tries to
+# load a large Terminus font so the 80×24 terminal grid fills the display.
+# On 1366×768 a 16×32 font gives roughly 85×24 characters.
 #
 # Usage: ./launch-pi.sh [meshtty flags, e.g. --bot --log]
 
@@ -21,57 +17,33 @@ if [ ! -f "$START_SCRIPT" ]; then
     exit 1
 fi
 
-# ── Detection helpers ─────────────────────────────────────────────────────────
+# ── Framebuffer font scaling ──────────────────────────────────────────────────
+# Only attempt on the Linux framebuffer console (not SSH, not X/Wayland).
+# A large font makes each character cell bigger so 80 columns fills the screen.
 
 _in_ssh()  { [ -n "${SSH_CLIENT:-}" ] || [ -n "${SSH_TTY:-}" ]; }
-_in_x()    { [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; }
-_has_x()   { command -v Xorg &>/dev/null || command -v X &>/dev/null; }
-_has_crt() {
-    command -v cool-retro-term &>/dev/null \
-    || [ -x "$HOME/.local/bin/cool-retro-term" ]
-}
-_has_openbox() { command -v openbox &>/dev/null; }
+_in_gui()  { [ -n "${DISPLAY:-}" ]    || [ -n "${WAYLAND_DISPLAY:-}" ]; }
 
-# ── SSH: always plain terminal ────────────────────────────────────────────────
-
-if _in_ssh; then
-    exec "$START_SCRIPT" "$@"
+if ! _in_ssh && ! _in_gui && [ "$TERM" = "linux" ]; then
+    # Terminus 16×32 — widest/tallest Terminus variant shipped by console-setup
+    FONT_CANDIDATES=(
+        /usr/share/consolefonts/Uni3-Terminus32x16.psf.gz
+        /usr/share/consolefonts/Uni2-Terminus32x16.psf.gz
+        /usr/share/consolefonts/Terminus32x16.psf.gz
+    )
+    for f in "${FONT_CANDIDATES[@]}"; do
+        if [ -f "$f" ]; then
+            setfont "$f" 2>/dev/null && break || true
+        fi
+    done
 fi
 
-# ── Already inside an X session ───────────────────────────────────────────────
+# ── Ensure a capable TERM ─────────────────────────────────────────────────────
 
-if _in_x; then
-    if _has_crt; then
-        # cool-retro-term handles fullscreen via openbox rc.xml rule installed
-        # by install-pi.sh.  Pass meshtty.sh as the inner command.
-        exec cool-retro-term -e "$START_SCRIPT"
-    else
-        exec "$START_SCRIPT" "$@"
-    fi
-fi
-
-# ── On a tty: start X with cool-retro-term kiosk ─────────────────────────────
-
-if _has_crt && _has_x && _has_openbox; then
-    # Sanity-check that install-pi.sh configured the kiosk properly
-    if [ ! -f "$HOME/.config/openbox/autostart" ]; then
-        echo "WARNING: openbox autostart not found." >&2
-        echo "         Re-run install-pi.sh to configure the X kiosk." >&2
-        echo "         Falling back to plain terminal." >&2
-        exec "$START_SCRIPT" "$@"
-    fi
-
-    # Ensure TERM is set for the inner meshtty process
+if [ "$TERM" = "linux" ] || [ "$TERM" = "dumb" ] || [ -z "$TERM" ]; then
     export TERM=xterm-256color
-
-    # startx launches openbox-session (via ~/.xinitrc), which runs the
-    # autostart that opens cool-retro-term fullscreen with meshtty.sh inside.
-    # When cool-retro-term exits the autostart calls 'openbox --exit',
-    # which causes startx to return here.
-    exec startx -- :0 -nolisten tcp 2>/tmp/meshtty-x.log
-
 fi
 
-# ── Fallback: plain terminal ──────────────────────────────────────────────────
+# ── Launch ────────────────────────────────────────────────────────────────────
 
 exec "$START_SCRIPT" "$@"
