@@ -312,6 +312,35 @@ fi"
     fi
 fi
 
+# ── loginctl / session options ────────────────────────────────────────────────
+
+echo ""
+echo ">>> loginctl options"
+echo ""
+
+# enable-linger: keep the user session alive after logout so user-level
+# systemd services (e.g. a future meshtty.service) can start at boot.
+if loginctl show-user "$USER" 2>/dev/null | grep -q "Linger=yes"; then
+    echo "    Linger already enabled for $USER."
+else
+    echo "  enable-linger lets user services survive logout and start at boot."
+    echo "  Recommended if you plan to run MeshTTY as a background service."
+    echo ""
+    if _ask "  Enable linger for $USER?"; then
+        loginctl enable-linger "$USER"
+        echo "    Done: loginctl enable-linger $USER"
+    else
+        echo "    Skipped. To enable later:"
+        echo "      loginctl enable-linger $USER"
+    fi
+fi
+
+echo ""
+echo "  Other useful loginctl commands:"
+echo "    loginctl show-user $USER          — show session properties"
+echo "    loginctl terminate-session \$XDG_SESSION_ID  — kill current session"
+echo "    loginctl list-sessions             — show all active sessions"
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 
 echo ""
