@@ -234,7 +234,7 @@ if $INSTALL_CRT; then
 
         # gpu_mem must be ≥64 MB for cool-retro-term's OpenGL renderer.
         # DietPi defaults to gpu_mem=16 which is too low.
-        GPU_MEM="$(grep "^gpu_mem" "$BOOT_CONFIG" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d ' ')"
+        GPU_MEM="$(grep "^gpu_mem" "$BOOT_CONFIG" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d ' ')" || true
         if [ -n "$GPU_MEM" ] && [ "$GPU_MEM" -lt 64 ] 2>/dev/null; then
             echo ""
             echo "    gpu_mem=${GPU_MEM} MB is too low for cool-retro-term (needs ≥64 MB)."
