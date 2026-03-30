@@ -16,7 +16,16 @@ class _SerialInterface(meshtastic.serial_interface.SerialInterface):
     which corrupts protobuf framing and can cause configCompleteId to be lost.
     If _waitConnected times out but the interface already has node data, we
     force the connected state ourselves so the app can proceed normally.
+
+    Also sets transport._interface early (right after _waitConnected, before
+    waitForConfig) so that is_connected returns True immediately when
+    ConnectionEstablished is processed by the asyncio loop.
     """
+
+    def __init__(self, dev_path: str, transport=None) -> None:
+        self._transport_ref = transport
+        self._interface_set_early = False
+        super().__init__(dev_path)
 
     def _waitConnected(self, timeout: float = _CONNECT_TIMEOUT) -> None:
         try:
@@ -31,6 +40,16 @@ class _SerialInterface(meshtastic.serial_interface.SerialInterface):
                 self._connected()  # sets isConnected, starts heartbeat, fires pubsub event
             else:
                 raise
+        # Set transport._interface NOW — before waitForConfig runs — so that
+        # is_connected returns True by the time ConnectionEstablished is
+        # processed by the asyncio loop (post_message is non-blocking, so
+        # the event loop won't process the event until after this returns).
+        # Guard against repeated calls (meshtastic calls _waitConnected again
+        # during internal reconnect/heartbeat cycles).
+        if self._transport_ref is not None and not self._interface_set_early:
+            self._interface_set_early = True
+            self._transport_ref._interface = self
+            log.debug("_interface set early on transport (pre-waitForConfig)")
 
     def waitForConfig(self) -> None:
         try:
@@ -56,7 +75,7 @@ class SerialTransport(TransportManager):
 
     def connect(self) -> None:
         log.debug("SerialInterface opening %s (timeout=%ss)", self._dev_path, int(_CONNECT_TIMEOUT))
-        self._interface = _SerialInterface(self._dev_path)
+        self._interface = _SerialInterface(self._dev_path, transport=self)
         log.debug("SerialInterface opened successfully")
 
     def disconnect(self) -> None:
