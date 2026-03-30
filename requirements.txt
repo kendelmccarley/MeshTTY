@@ -4,5 +4,5 @@ meshtastic>=2.7.7
 bleak>=0.22.3
 pyserial>=3.5
 pypubsub>=4.0.3
-protobuf>=4.21.12
+protobuf>=4.21.12,<6.0
 anyio>=4.0.0
