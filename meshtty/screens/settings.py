@@ -18,9 +18,9 @@ _TRANSPORT_OPTIONS = [
 ]
 
 _THEME_OPTIONS = [
-    ("Multicolor",     "meshtty-multicolor"),
-    ("Green Phosphor", "meshtty-phosphor"),
-    ("Black & White",  "meshtty-bw"),
+    ("Amber",          "crt-amber"),
+    ("Green Phosphor", "crt-phosphor"),
+    ("IBM / Grey",     "crt-ibm"),
 ]
 
 

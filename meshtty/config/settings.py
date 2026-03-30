@@ -20,7 +20,7 @@ class AppConfig:
     )
     default_channel: int = 0
     node_short_name_display: bool = True
-    theme: str = "meshtty-multicolor"
+    theme: str = "crt-amber"
 
 
 def load_config() -> AppConfig:
