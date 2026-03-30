@@ -38,26 +38,19 @@ fi
 
 cd "$SCRIPT_DIR"
 
-# ── Check for local modifications ─────────────────────────────────────────────
-
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "  WARNING: You have uncommitted local changes:"
-    git status --short
-    echo ""
-    read -r -p "  Continue anyway? Local changes will be preserved. [y/N] " ans
-    [[ "${ans,,}" == "y" ]] || { echo "Aborted."; exit 0; }
-    echo ""
-fi
-
 # ── Snapshot current HEAD so we can show a changelog ──────────────────────────
 
 PREV_HEAD="$(git rev-parse HEAD)"
 
-# ── Pull from GitHub ──────────────────────────────────────────────────────────
+# ── Fetch and hard-reset to remote (flushes local changes and cached state) ───
 
 echo ">>> Fetching updates from GitHub..."
-git pull --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" 2>&1 \
-    || { echo ""; echo "ERROR: git pull failed — check your network or resolve conflicts manually."; exit 1; }
+git fetch origin 2>&1 \
+    || { echo "ERROR: git fetch failed — check your network."; exit 1; }
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+git reset --hard "origin/$BRANCH"
+git clean -fd
 
 NEW_HEAD="$(git rev-parse HEAD)"
 
