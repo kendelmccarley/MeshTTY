@@ -108,6 +108,20 @@ fi
 # ── 1. Base system packages ───────────────────────────────────────────────────
 
 _section "[1/8] Installing base system packages..."
+
+# Warn if using a Bluetooth keyboard — bluez install may restart the BT service
+# and drop the connection briefly.
+if ls /dev/input/event* 2>/dev/null | xargs -I{} udevadm info {} 2>/dev/null \
+        | grep -qi "bluetooth" 2>/dev/null \
+   || systemctl is-active bluetooth &>/dev/null; then
+    echo ""
+    echo "  ⚠  Bluetooth keyboard detected."
+    echo "     Installing bluez may briefly drop your BT keyboard connection."
+    echo "     If you lose input, wait 10 seconds — it should reconnect."
+    echo "     Using a wired keyboard for install is recommended."
+    echo ""
+fi
+
 sudo apt-get update -qq
 sudo apt-get install -y \
     python3-pip \
@@ -119,7 +133,9 @@ sudo apt-get install -y \
     git
 
 sudo systemctl enable bluetooth --quiet 2>/dev/null || true
-sudo systemctl start  bluetooth         2>/dev/null || true
+# Only start if not already running — avoids dropping active BT connections
+systemctl is-active --quiet bluetooth \
+    || sudo systemctl start bluetooth 2>/dev/null || true
 
 # ── 2. cool-retro-term + X server ─────────────────────────────────────────────
 
