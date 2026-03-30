@@ -89,11 +89,15 @@ pip install -e "$SCRIPT_DIR" --quiet
 
 # ── Regenerate meshtty.sh if the template section of install.sh changed ───────
 
-if ! git diff --quiet "${PREV_HEAD}" "${NEW_HEAD}" -- install.sh 2>/dev/null; then
+INSTALL_SCRIPT="$SCRIPT_DIR/install.sh"
+[ -f "$SCRIPT_DIR/install-pi.sh" ] && grep -qi "raspberry\|dietpi" /etc/os-release 2>/dev/null \
+    && INSTALL_SCRIPT="$SCRIPT_DIR/install-pi.sh"
+
+if ! git diff --quiet "${PREV_HEAD}" "${NEW_HEAD}" -- "$INSTALL_SCRIPT" 2>/dev/null; then
     echo ""
-    echo ">>> install.sh changed — regenerating meshtty.sh..."
-    bash "$SCRIPT_DIR/install.sh" --regen-scripts-only 2>/dev/null \
-        || echo "    (Re-run install.sh manually if the launch script needs updating)"
+    echo ">>> $(basename "$INSTALL_SCRIPT") changed — regenerating meshtty.sh..."
+    bash "$INSTALL_SCRIPT" --regen-scripts-only 2>/dev/null \
+        || echo "    (Re-run $(basename "$INSTALL_SCRIPT") manually if the launch script needs updating)"
 fi
 
 # Ensure meshtty-crt.sh is still executable after a pull
