@@ -71,6 +71,16 @@ class Database:
             )
             self._conn.commit()
 
+    def get_conversation_prefixes(self) -> list[tuple[str, int]]:
+        """Return (display_prefix, max_rx_time) for inbound messages, ordered by recency."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT display_prefix, MAX(rx_time) AS last_time "
+                "FROM messages WHERE is_mine = 0 AND display_prefix != '' "
+                "GROUP BY display_prefix ORDER BY last_time DESC"
+            )
+            return [(row["display_prefix"], row["last_time"]) for row in cur.fetchall()]
+
     def get_messages(self, limit: int = 200) -> list:
         with self._lock:
             cur = self._conn.execute(

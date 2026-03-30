@@ -27,20 +27,15 @@ class MessagesView(Widget):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._last_prefix: str = ""
+        self._conversations: list[str] = []
+        self._conv_index: int = 0
 
     def compose(self) -> ComposeResult:
         yield MessageView(id="message-view")
         yield ComposeBar()
 
     def on_mount(self) -> None:
-        transport = self.app.transport
-        channels = transport.get_channels() if transport else []
-        first_name = channels[0][1] if channels else "Primary"
-        self._last_prefix = first_name
-        try:
-            self.query_one(ComposeBar).set_prefix(first_name)
-        except Exception:
-            pass
+        self._refresh_conversations()
         self._load_history()
 
     def on_show(self) -> None:
@@ -50,15 +45,81 @@ class MessagesView(Widget):
         except Exception:
             pass
 
+    # ------------------------------------------------------------------
+    # Conversation list helpers
+    # ------------------------------------------------------------------
+
+    def _build_conversations(self) -> list[str]:
+        """Return conversation prefixes ordered by most recent inbound message."""
+        # Prefixes seen in DB with their last rx_time
+        prefix_times: dict[str, int] = {}
+        try:
+            for prefix, last_time in self.app.db.get_conversation_prefixes():
+                prefix_times[prefix] = last_time
+        except Exception:
+            pass
+
+        # All transport channels — add any not yet in DB with time 0
+        transport = self.app.transport
+        channel_names = [name for _, name in (transport.get_channels() if transport else [])]
+        for name in channel_names:
+            if name not in prefix_times:
+                prefix_times[name] = 0
+
+        # Fallback if nothing at all
+        if not prefix_times:
+            return ["Primary"]
+
+        return sorted(prefix_times, key=lambda p: prefix_times[p], reverse=True)
+
+    def _refresh_conversations(self) -> None:
+        """Rebuild the conversation list, keeping the current prefix selected."""
+        new_list = self._build_conversations()
+        self._conversations = new_list
+        current = self._last_prefix
+        if current in new_list:
+            self._conv_index = new_list.index(current)
+        else:
+            self._conv_index = 0
+        if new_list:
+            prefix = new_list[self._conv_index]
+            self._last_prefix = prefix
+            try:
+                self.query_one(ComposeBar).set_prefix(prefix)
+            except Exception:
+                pass
+
+    def _cycle_conversation(self, delta: int) -> None:
+        if not self._conversations:
+            return
+        self._conv_index = (self._conv_index + delta) % len(self._conversations)
+        prefix = self._conversations[self._conv_index]
+        self._last_prefix = prefix
+        try:
+            self.query_one(ComposeBar).set_prefix(prefix)
+        except Exception:
+            pass
+
     def on_key(self, event: Key) -> None:
-        """Arrow keys scroll the message view regardless of focus."""
+        """Up/down cycle conversations when compose is focused; scroll message view otherwise."""
+        try:
+            compose_focused = self.app.focused is self.query_one("#compose-input")
+        except Exception:
+            compose_focused = False
+
         try:
             view = self.query_one("#message-view", MessageView)
             if event.key == "up":
-                view.scroll_up(animate=False)
+                if compose_focused:
+                    self._cycle_conversation(-1)
+                else:
+                    view.scroll_up(animate=False)
                 event.stop()
             elif event.key == "down":
-                view.scroll_down(animate=False)
+                if compose_focused:
+                    self._cycle_conversation(1)
+                else:
+                    view.scroll_down(animate=False)
                 event.stop()
             elif event.key == "pageup":
                 view.scroll_page_up(animate=False)
@@ -160,10 +221,6 @@ class MessagesView(Widget):
             self._last_prefix = prefix
             view = self.query_one("#message-view", MessageView)
             view.append_message(prefix=prefix, text=event.text, rx_time=event.rx_time)
-            try:
-                self.query_one(ComposeBar).set_prefix(prefix)
-            except Exception:
-                pass
             self._write_message(
                 event.from_id,
                 event.to_id,
@@ -175,6 +232,8 @@ class MessagesView(Widget):
                 prefix,
             )
             self._log("RX", prefix, event.text)
+            # Rebuild conversation list so new sender appears at the top
+            self._refresh_conversations()
         except Exception:
             pass
 
