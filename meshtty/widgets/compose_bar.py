@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
-from textual.events import Key
 from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button, Input, Static
@@ -44,20 +43,8 @@ class PrefixSelector(Static):
         self._prefix = prefix
         self.update(prefix[:10].ljust(10))
 
-    def on_key(self, event: Key) -> None:
-        if event.key == "up":
-            self.post_message(self.CycleRequest(-1))
-            event.stop()
-        elif event.key == "down":
-            self.post_message(self.CycleRequest(1))
-            event.stop()
-        elif event.key == "enter":
-            # Advance focus to the message input
-            try:
-                self.app.query_one("#compose-input", Input).focus()
-            except Exception:
-                pass
-            event.stop()
+    # Key handling (up/down/enter) is done in MessagesView.on_key so that
+    # events from all focusable widgets are handled in one place reliably.
 
 
 class ComposeBar(Widget):

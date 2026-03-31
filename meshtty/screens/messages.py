@@ -10,7 +10,7 @@ from textual.events import Key
 from textual.widget import Widget
 
 from meshtty.messages.app_messages import TextMessageReceived
-from meshtty.widgets.compose_bar import ComposeBar, PrefixSelector
+from meshtty.widgets.compose_bar import ComposeBar
 from meshtty.widgets.message_view import MessageView
 
 
@@ -139,8 +139,21 @@ class MessagesView(Widget):
             idx = -1 if delta > 0 else 0
         order[(idx + delta) % len(order)].focus()
 
-    def on_key(self, event: Key) -> None:
-        """Tab/Shift-Tab cycle focus; PageUp/PageDown always scroll."""
+    def on_key(self, event: Key) -> None:  # noqa: C901
+        """Single handler for all navigation keys on the messages screen.
+
+        Key events bubble up from the focused widget to MessagesView, so this
+        method sees every key not consumed by a lower widget (Input consumes
+        printable characters and Enter; nothing else does).
+
+        Focus order (Tab):  message-view → prefix-selector → compose-input → wrap
+        Up/Down on prefix-selector: cycle conversations
+        Up/Down elsewhere:          scroll message history
+        PageUp/PageDown:            always scroll
+        Enter on prefix-selector:   advance focus to compose-input
+        """
+        focused_id = getattr(self.app.focused, "id", None)
+
         if event.key == "tab":
             self._move_focus(1)
             event.stop()
@@ -149,21 +162,37 @@ class MessagesView(Widget):
             self._move_focus(-1)
             event.stop()
             return
-        # PageUp/PageDown always scroll regardless of focus
-        if event.key in ("pageup", "pagedown"):
+        if event.key == "enter" and focused_id == "prefix-selector":
             try:
-                view = self.query_one("#message-view", MessageView)
-                if event.key == "pageup":
-                    view.scroll_page_up(animate=False)
-                else:
-                    view.scroll_page_down(animate=False)
-                event.stop()
+                self.query_one("#compose-input").focus()
             except Exception:
                 pass
+            event.stop()
+            return
 
-    def on_prefix_selector_cycle_request(self, event: PrefixSelector.CycleRequest) -> None:
-        event.stop()
-        self._cycle_conversation(event.delta)
+        try:
+            view = self.query_one("#message-view", MessageView)
+        except Exception:
+            return
+
+        if event.key == "up":
+            if focused_id == "prefix-selector":
+                self._cycle_conversation(-1)
+            else:
+                view.scroll_up(animate=False)
+            event.stop()
+        elif event.key == "down":
+            if focused_id == "prefix-selector":
+                self._cycle_conversation(1)
+            else:
+                view.scroll_down(animate=False)
+            event.stop()
+        elif event.key == "pageup":
+            view.scroll_page_up(animate=False)
+            event.stop()
+        elif event.key == "pagedown":
+            view.scroll_page_down(animate=False)
+            event.stop()
 
     # ------------------------------------------------------------------
     # Prefix resolution helpers

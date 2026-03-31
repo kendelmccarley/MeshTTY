@@ -6,7 +6,6 @@ import textwrap
 from datetime import datetime
 
 from textual.app import ComposeResult
-from textual.events import Key
 from textual.widget import Widget
 from textual.widgets import Label
 
@@ -61,20 +60,6 @@ class MessageView(Widget):
     def compose(self) -> ComposeResult:
         return
         yield  # make it a generator
-
-    def on_key(self, event: Key) -> None:
-        if event.key == "up":
-            self.scroll_up(animate=False)
-            event.stop()
-        elif event.key == "down":
-            self.scroll_down(animate=False)
-            event.stop()
-        elif event.key == "pageup":
-            self.scroll_page_up(animate=False)
-            event.stop()
-        elif event.key == "pagedown":
-            self.scroll_page_down(animate=False)
-            event.stop()
 
     def append_message(
         self,
