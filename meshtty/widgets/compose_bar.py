@@ -63,7 +63,6 @@ class ComposeBar(Widget):
         height: 1;
         background: transparent;
         padding: 0 1;
-        layer: content;
     }
     ComposeBar Horizontal {
         height: 1;

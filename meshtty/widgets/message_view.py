@@ -39,7 +39,7 @@ class MessageView(Widget):
     MessageView {
         height: 1fr;
         overflow-y: auto;
-        padding: 0;
+        padding: 0 0 1 0;
         background: $surface;
     }
     MessageView:focus {

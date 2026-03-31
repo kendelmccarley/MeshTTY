@@ -45,6 +45,13 @@ class MessagesView(Widget):
         except Exception:
             pass
 
+    def on_connection_established(self, event) -> None:
+        """Refresh conversation list once the radio's node table is available."""
+        try:
+            self._refresh_conversations()
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # Conversation list helpers
     # ------------------------------------------------------------------
@@ -52,8 +59,9 @@ class MessagesView(Widget):
     def _build_conversations(self) -> list[str]:
         """Return conversation prefixes ordered by most recent activity.
 
-        List contains channel names (for broadcast) and node short names (for DMs),
-        all sorted by the most recent message time so the most active appears first.
+        Includes all channels (always), all nodes with message history (sorted
+        by last rx_time), and all other known nodes (appended at the end with
+        time=-1 so they sort last).
         """
         prefix_times: dict[str, int] = {}
         transport = self.app.transport
@@ -63,7 +71,19 @@ class MessagesView(Widget):
             node = nodes.get(node_id) or {}
             user = (node.get("user") or {})
             short = user.get("shortName", "").strip()
-            return short if short else node_id
+            if short:
+                return short
+            # Secondary scan
+            needle = str(node_id).lstrip("!").lower()
+            for nid, ndata in nodes.items():
+                if not ndata:
+                    continue
+                if str(nid).lstrip("!").lower() == needle:
+                    user = (ndata.get("user") or {})
+                    short = user.get("shortName", "").strip()
+                    if short:
+                        return short
+            return node_id
 
         # Channels — always included; seed with last message time from DB
         try:
@@ -73,7 +93,7 @@ class MessagesView(Widget):
         for idx, name in (transport.get_channels() if transport else [(0, "Primary")]):
             prefix_times[name] = chan_times.get(idx, 0)
 
-        # DM nodes — resolved to short names, sorted by last message time
+        # DM nodes from message history — resolved to short names
         try:
             dm_nodes = self.app.db.get_dm_nodes()
         except Exception:
@@ -82,6 +102,21 @@ class MessagesView(Widget):
             display = _short(node_id)
             if last_time > prefix_times.get(display, -1):
                 prefix_times[display] = last_time
+
+        # All known nodes from the radio — add any not yet in the list
+        my_node = transport.get_my_node() if transport else {}
+        my_id = (my_node.get("num") or my_node.get("id") or "") if my_node else ""
+        for node_id, ndata in nodes.items():
+            if not ndata:
+                continue
+            # Skip our own node
+            nnum = (ndata.get("num") or "")
+            if my_id and str(nnum) == str(my_id):
+                continue
+            user = (ndata.get("user") or {})
+            short = user.get("shortName", "").strip()
+            if short and short not in prefix_times:
+                prefix_times[short] = -1  # known but no message history yet
 
         if not prefix_times:
             return ["Primary"]
@@ -195,25 +230,47 @@ class MessagesView(Widget):
             event.stop()
 
     # ------------------------------------------------------------------
+    # Node lookup helpers
+    # ------------------------------------------------------------------
+
+    def _short_name_for(self, node_id: str) -> str:
+        """Return a node's short name given its ID, with fallback search.
+
+        Meshtastic keys nodes by hex string (e.g. '!a1b2c3d4').  The fromId
+        in a packet should match, but we do a secondary scan stripping the
+        '!' prefix and lowercasing to be safe.
+        """
+        transport = self.app.transport
+        if not transport:
+            return ""
+        nodes = transport.get_nodes()
+        # Direct lookup
+        node = nodes.get(node_id) or {}
+        user = (node.get("user") or {})
+        short = user.get("shortName", "").strip()
+        if short:
+            return short
+        # Secondary scan: strip '!' and compare lowercase
+        needle = node_id.lstrip("!").lower()
+        for nid, ndata in nodes.items():
+            if not ndata:
+                continue
+            if str(nid).lstrip("!").lower() == needle:
+                user = (ndata.get("user") or {})
+                short = user.get("shortName", "").strip()
+                if short:
+                    return short
+        return ""
+
+    # ------------------------------------------------------------------
     # Prefix resolution helpers
     # ------------------------------------------------------------------
 
     def _resolve_incoming_prefix(self, event: TextMessageReceived) -> str:
-        """Return the sender's short name for display.
-
-        Always shows who sent the message. For channel messages this means
-        you see the sender's node name, not the channel name. The channel
-        index is preserved in the DB 'channel' column for conversation routing.
-        """
-        transport = self.app.transport
-        if transport:
-            nodes = transport.get_nodes()
-            node = nodes.get(event.from_id) or {}
-            user = (node.get("user") or {})
-            short = user.get("shortName", "").strip()
-            if short:
-                return short
-        # Fallback: trim the node ID to something readable
+        """Return the sender's short name for display."""
+        short = self._short_name_for(event.from_id)
+        if short:
+            return short
         fid = event.from_id or "?"
         return fid[-8:] if len(fid) > 8 else fid
 
