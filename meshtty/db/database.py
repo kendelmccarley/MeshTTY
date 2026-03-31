@@ -71,6 +71,33 @@ class Database:
             )
             self._conn.commit()
 
+    def get_channel_last_times(self) -> dict[int, int]:
+        """Return {channel_idx: max_rx_time} for channel messages."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT channel, MAX(rx_time) AS last_time FROM messages "
+                "WHERE to_id = '^all' GROUP BY channel"
+            )
+            return {row["channel"]: row["last_time"] for row in cur.fetchall()}
+
+    def get_dm_nodes(self) -> list[tuple[str, int]]:
+        """Return (node_id, max_rx_time) for all DM conversations, newest first."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT node_id, MAX(last_time) AS last_time FROM ("
+                "  SELECT from_id AS node_id, MAX(rx_time) AS last_time"
+                "  FROM messages WHERE is_mine = 0 AND to_id != '^all'"
+                "  AND from_id IS NOT NULL AND from_id != ''"
+                "  AND from_id != '!unknown' GROUP BY from_id"
+                "  UNION ALL"
+                "  SELECT to_id AS node_id, MAX(rx_time) AS last_time"
+                "  FROM messages WHERE is_mine = 1 AND to_id != '^all'"
+                "  AND to_id IS NOT NULL AND to_id != ''"
+                "  AND to_id != '^all' GROUP BY to_id"
+                ") GROUP BY node_id ORDER BY last_time DESC"
+            )
+            return [(row["node_id"], row["last_time"]) for row in cur.fetchall()]
+
     def get_conversation_prefixes(self) -> list[tuple[str, int]]:
         """Return (display_prefix, max_rx_time) for inbound messages, ordered by recency."""
         with self._lock:

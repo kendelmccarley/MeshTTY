@@ -27,11 +27,11 @@ class TextMessageReceived(Message, bubble=False):
     def __init__(self, packet: dict) -> None:
         self.packet = packet
         decoded = packet.get("decoded", {})
-        self.from_id: str = packet.get("fromId", "!unknown")
-        self.to_id: str = packet.get("toId", "^all")
-        self.channel: int = packet.get("channel", 0)
+        self.from_id: str = packet.get("fromId") or "!unknown"
+        self.to_id: str = packet.get("toId") or "^all"
+        self.channel: int = packet.get("channel") or 0
         self.text: str = decoded.get("text", "")
-        self.rx_time: int = packet.get("rxTime", 0)
+        self.rx_time: int = packet.get("rxTime") or 0
         self.packet_id: str | None = str(packet.get("id")) if packet.get("id") else None
         super().__init__()
 

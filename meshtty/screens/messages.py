@@ -50,23 +50,39 @@ class MessagesView(Widget):
     # ------------------------------------------------------------------
 
     def _build_conversations(self) -> list[str]:
-        """Return conversation prefixes ordered by most recent inbound message."""
-        # Prefixes seen in DB with their last rx_time
+        """Return conversation prefixes ordered by most recent activity.
+
+        List contains channel names (for broadcast) and node short names (for DMs),
+        all sorted by the most recent message time so the most active appears first.
+        """
         prefix_times: dict[str, int] = {}
-        try:
-            for prefix, last_time in self.app.db.get_conversation_prefixes():
-                prefix_times[prefix] = last_time
-        except Exception:
-            pass
-
-        # All transport channels — add any not yet in DB with time 0
         transport = self.app.transport
-        channel_names = [name for _, name in (transport.get_channels() if transport else [])]
-        for name in channel_names:
-            if name not in prefix_times:
-                prefix_times[name] = 0
+        nodes = transport.get_nodes() if transport else {}
 
-        # Fallback if nothing at all
+        def _short(node_id: str) -> str:
+            node = nodes.get(node_id) or {}
+            user = (node.get("user") or {})
+            short = user.get("shortName", "").strip()
+            return short if short else node_id
+
+        # Channels — always included; seed with last message time from DB
+        try:
+            chan_times = self.app.db.get_channel_last_times()
+        except Exception:
+            chan_times = {}
+        for idx, name in (transport.get_channels() if transport else [(0, "Primary")]):
+            prefix_times[name] = chan_times.get(idx, 0)
+
+        # DM nodes — resolved to short names, sorted by last message time
+        try:
+            dm_nodes = self.app.db.get_dm_nodes()
+        except Exception:
+            dm_nodes = []
+        for node_id, last_time in dm_nodes:
+            display = _short(node_id)
+            if last_time > prefix_times.get(display, -1):
+                prefix_times[display] = last_time
+
         if not prefix_times:
             return ["Primary"]
 
@@ -154,23 +170,23 @@ class MessagesView(Widget):
     # ------------------------------------------------------------------
 
     def _resolve_incoming_prefix(self, event: TextMessageReceived) -> str:
-        """Determine a human-readable prefix for an incoming message."""
+        """Return the sender's short name for display.
+
+        Always shows who sent the message. For channel messages this means
+        you see the sender's node name, not the channel name. The channel
+        index is preserved in the DB 'channel' column for conversation routing.
+        """
         transport = self.app.transport
-        if event.to_id == "^all":
-            if transport:
-                for idx, name in transport.get_channels():
-                    if idx == event.channel:
-                        return name
-            return f"Ch {event.channel}"
-        else:
-            if transport:
-                nodes = transport.get_nodes()
-                node = nodes.get(event.from_id, {})
-                user = node.get("user", {}) if node else {}
-                short = user.get("shortName", "").strip()
-                if short:
-                    return short
-            return event.from_id
+        if transport:
+            nodes = transport.get_nodes()
+            node = nodes.get(event.from_id) or {}
+            user = (node.get("user") or {})
+            short = user.get("shortName", "").strip()
+            if short:
+                return short
+        # Fallback: trim the node ID to something readable
+        fid = event.from_id or "?"
+        return fid[-8:] if len(fid) > 8 else fid
 
     def _resolve_send_destination(self, prefix: str) -> tuple[int | None, str]:
         """Return (channel_idx, dest_id) from a prefix string."""
