@@ -6,6 +6,7 @@ import textwrap
 from datetime import datetime
 
 from textual.app import ComposeResult
+from textual.events import Key
 from textual.widget import Widget
 from textual.widgets import Label
 
@@ -33,12 +34,17 @@ def _format_message(prefix: str, text: str, rx_time: int, is_mine: bool = False)
 class MessageView(Widget):
     """Scrollable list of chat messages."""
 
+    can_focus = True
+
     DEFAULT_CSS = """
     MessageView {
         height: 1fr;
         overflow-y: auto;
         padding: 0;
         background: $surface;
+    }
+    MessageView:focus {
+        border-top: solid $primary;
     }
     MessageView Label {
         height: auto;
@@ -55,6 +61,20 @@ class MessageView(Widget):
     def compose(self) -> ComposeResult:
         return
         yield  # make it a generator
+
+    def on_key(self, event: Key) -> None:
+        if event.key == "up":
+            self.scroll_up(animate=False)
+            event.stop()
+        elif event.key == "down":
+            self.scroll_down(animate=False)
+            event.stop()
+        elif event.key == "pageup":
+            self.scroll_page_up(animate=False)
+            event.stop()
+        elif event.key == "pagedown":
+            self.scroll_page_down(animate=False)
+            event.stop()
 
     def append_message(
         self,

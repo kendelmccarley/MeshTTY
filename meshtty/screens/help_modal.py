@@ -19,6 +19,14 @@ _SHORTCUTS = """\
  Ctrl+Q    Quit
  F1        This help screen
 
+ Messages screen:
+   Tab       Cycle focus: history → channel → input
+   Shift+Tab Reverse focus cycle
+   Up/Down   Scroll history (when history focused)
+   Up/Down   Cycle channel/DM (when channel focused)
+   Enter     Send / advance to message input
+   PgUp/Dn   Scroll history (any focus)
+
  Node detail:
    Escape  Close
    Q       Close\

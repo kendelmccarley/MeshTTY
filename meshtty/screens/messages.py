@@ -10,7 +10,7 @@ from textual.events import Key
 from textual.widget import Widget
 
 from meshtty.messages.app_messages import TextMessageReceived
-from meshtty.widgets.compose_bar import ComposeBar
+from meshtty.widgets.compose_bar import ComposeBar, PrefixSelector
 from meshtty.widgets.message_view import MessageView
 
 
@@ -100,35 +100,54 @@ class MessagesView(Widget):
         except Exception:
             pass
 
-    def on_key(self, event: Key) -> None:
-        """Up/down cycle conversations when compose is focused; scroll message view otherwise."""
-        try:
-            compose_focused = self.app.focused is self.query_one("#compose-input")
-        except Exception:
-            compose_focused = False
+    # Focus order: MessageView → PrefixSelector → compose Input → (wraps)
+    _FOCUS_IDS = ["message-view", "prefix-selector", "compose-input"]
 
+    def _focus_widgets(self) -> list:
+        widgets = []
+        for wid in self._FOCUS_IDS:
+            try:
+                widgets.append(self.query_one(f"#{wid}"))
+            except Exception:
+                pass
+        return widgets
+
+    def _move_focus(self, delta: int) -> None:
+        order = self._focus_widgets()
+        if not order:
+            return
+        focused = self.app.focused
         try:
-            view = self.query_one("#message-view", MessageView)
-            if event.key == "up":
-                if compose_focused:
-                    self._cycle_conversation(-1)
+            idx = order.index(focused)
+        except ValueError:
+            idx = -1 if delta > 0 else 0
+        order[(idx + delta) % len(order)].focus()
+
+    def on_key(self, event: Key) -> None:
+        """Tab/Shift-Tab cycle focus; PageUp/PageDown always scroll."""
+        if event.key == "tab":
+            self._move_focus(1)
+            event.stop()
+            return
+        if event.key == "shift+tab":
+            self._move_focus(-1)
+            event.stop()
+            return
+        # PageUp/PageDown always scroll regardless of focus
+        if event.key in ("pageup", "pagedown"):
+            try:
+                view = self.query_one("#message-view", MessageView)
+                if event.key == "pageup":
+                    view.scroll_page_up(animate=False)
                 else:
-                    view.scroll_up(animate=False)
+                    view.scroll_page_down(animate=False)
                 event.stop()
-            elif event.key == "down":
-                if compose_focused:
-                    self._cycle_conversation(1)
-                else:
-                    view.scroll_down(animate=False)
-                event.stop()
-            elif event.key == "pageup":
-                view.scroll_page_up(animate=False)
-                event.stop()
-            elif event.key == "pagedown":
-                view.scroll_page_down(animate=False)
-                event.stop()
-        except Exception:
-            pass
+            except Exception:
+                pass
+
+    def on_prefix_selector_cycle_request(self, event: PrefixSelector.CycleRequest) -> None:
+        event.stop()
+        self._cycle_conversation(event.delta)
 
     # ------------------------------------------------------------------
     # Prefix resolution helpers
