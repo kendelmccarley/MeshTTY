@@ -68,12 +68,12 @@ class MessagesView(Widget):
         nodes = transport.get_nodes() if transport else {}
 
         def _short(node_id: str) -> str:
+            """Return short name for a node_id, or empty string if not found."""
             node = nodes.get(node_id) or {}
             user = (node.get("user") or {})
             short = user.get("shortName", "").strip()
             if short:
                 return short
-            # Secondary scan
             needle = str(node_id).lstrip("!").lower()
             for nid, ndata in nodes.items():
                 if not ndata:
@@ -83,7 +83,7 @@ class MessagesView(Widget):
                     short = user.get("shortName", "").strip()
                     if short:
                         return short
-            return node_id
+            return ""
 
         # Channels — always included; seed with last message time from DB
         try:
@@ -93,13 +93,18 @@ class MessagesView(Widget):
         for idx, name in (transport.get_channels() if transport else [(0, "Primary")]):
             prefix_times[name] = chan_times.get(idx, 0)
 
-        # DM nodes from message history — resolved to short names
+        # DM nodes from message history — resolved to short names only
+        _bad_ids = {"!unknown", "unknown", "me", ""}
         try:
             dm_nodes = self.app.db.get_dm_nodes()
         except Exception:
             dm_nodes = []
         for node_id, last_time in dm_nodes:
+            if not node_id or node_id in _bad_ids:
+                continue
             display = _short(node_id)
+            if not display:
+                continue  # skip nodes we can't resolve to a short name
             if last_time > prefix_times.get(display, -1):
                 prefix_times[display] = last_time
 
@@ -400,7 +405,24 @@ class MessagesView(Widget):
 
     def _apply_history(self, rows: list) -> None:
         view = self.query_one("#message-view", MessageView)
-        view.load_messages(rows)
+        for row in rows:
+            is_mine = bool(row["is_mine"])
+            from_id = row["from_id"] or ""
+            stored_prefix = (row["display_prefix"] or "") if "display_prefix" in row.keys() else ""
+
+            # Always try to resolve the current short name for received messages
+            if not is_mine and from_id:
+                short = self._short_name_for(from_id)
+                prefix = short if short else (stored_prefix or from_id or "?")
+            else:
+                prefix = stored_prefix or from_id or "?"
+
+            view.append_message(
+                prefix=prefix,
+                text=row["text"],
+                rx_time=row["rx_time"],
+                is_mine=is_mine,
+            )
 
     @work(thread=True, name="write-message", exit_on_error=False)
     def _write_message(

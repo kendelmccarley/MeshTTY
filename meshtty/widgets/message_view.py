@@ -72,7 +72,7 @@ class MessageView(Widget):
         css_class = "mine" if is_mine else "theirs"
         label = Label(formatted, classes=css_class, markup=False)
         self.mount(label)
-        self.scroll_end(animate=False)
+        self.call_after_refresh(self.scroll_end, animate=False)
 
     def load_messages(self, rows: list) -> None:
         """Bulk-load historical messages (called from worker result)."""

@@ -59,7 +59,6 @@ class ComposeBar(Widget):
 
     DEFAULT_CSS = """
     ComposeBar {
-        dock: bottom;
         height: 1;
         background: transparent;
         padding: 0 1;
