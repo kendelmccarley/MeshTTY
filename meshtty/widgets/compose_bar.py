@@ -4,47 +4,57 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
+from textual.events import Key
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Button, Input, Static
+from textual.widgets import Button, Input
 
 
-class PrefixSelector(Static):
-    """Focusable channel/node name display. Up/Down cycles; Enter advances to compose."""
-
-    can_focus = True
-
-    class CycleRequest(Message):
-        """Posted when the user presses Up or Down to cycle conversations."""
-        def __init__(self, delta: int) -> None:
-            self.delta = delta
-            super().__init__()
+class PrefixSelector(Input):
+    """Editable channel/node name field. Up/Down cycles; Enter/Tab advances to compose."""
 
     DEFAULT_CSS = """
     PrefixSelector {
         width: 12;
         height: 1;
+        min-height: 1;
         background: transparent;
         color: $text-disabled;
         padding: 0 1;
-        content-align: left middle;
+        border: none;
     }
     PrefixSelector:focus {
         color: $primary;
+        border: none;
         text-style: bold;
     }
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__("", **kwargs)
-        self._prefix = ""
+        super().__init__(placeholder="dest", **kwargs)
 
     def set_value(self, prefix: str) -> None:
-        self._prefix = prefix
-        self.update(prefix[:10].ljust(10))
+        self.value = prefix
 
-    # Key handling (up/down/enter) is done in MessagesView.on_key so that
-    # events from all focusable widgets are handled in one place reliably.
+    def on_key(self, event: Key) -> None:
+        if event.key in ("enter", "tab"):
+            event.stop()
+            try:
+                self.app.query_one("#compose-input").focus()
+            except Exception:
+                pass
+            return
+        if event.key == "shift+tab":
+            event.stop()
+            try:
+                self.app.query_one("#message-view").focus()
+            except Exception:
+                pass
+            return
+        # up/down: don't consume — let them bubble to MessagesView.on_key for cycling
+        if event.key in ("up", "down"):
+            return
+        super().on_key(event)
 
 
 class ComposeBar(Widget):
@@ -104,7 +114,8 @@ class ComposeBar(Widget):
             pass
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        self._do_send()
+        if event.input.id == "compose-input":
+            self._do_send()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "send-btn":
@@ -118,7 +129,7 @@ class ComposeBar(Widget):
             inp.focus()
             return
         try:
-            prefix = self.query_one("#prefix-selector", PrefixSelector)._prefix
+            prefix = self.query_one("#prefix-selector", PrefixSelector).value
         except Exception:
             prefix = ""
         self.post_message(self.SendRequested(prefix=prefix, text=text))

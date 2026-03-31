@@ -126,6 +126,11 @@ ComposeBar Input {
     padding: 0;
 }
 
+ComposeBar #prefix-selector {
+    width: 12;
+    color: $text-disabled;
+}
+
 ComposeBar Button {
     width: 8;
     height: 1;
