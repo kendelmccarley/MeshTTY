@@ -84,7 +84,7 @@ MessagesView {
 MessageView {
     height: 1fr;
     overflow-y: auto;
-    padding: 0 2;
+    padding: 0 2 1 2;
     background: transparent;
 }
 
@@ -106,11 +106,9 @@ MessageView .theirs {
 /* ── Compose bar (1 row, docked bottom inside frame) ─────────────────────── */
 
 ComposeBar {
-    dock: bottom;
     height: 1;
     background: transparent;
     padding: 0 1;
-    layer: content;
 }
 
 ComposeBar Horizontal {
