@@ -1,20 +1,10 @@
 # MeshTTY
 
 > **PRE-ALPHA — work in progress.**
-> This release has known bugs, incomplete features, and UI rough edges.
-> It is published for development tracking only.  Expect breaking changes
-> between commits.  Do not rely on it for real mesh-radio operations.
+> Known bugs, incomplete features, and UI rough edges.
+> Published for development tracking only. Expect breaking changes between commits.
 
-MeshTTY is a terminal-based (TUI) client for Meshtastic LoRa mesh radio
-networks, designed to run on a Raspberry Pi or any Linux/macOS system with a
-terminal.  It is built with the [Textual](https://textual.textualize.io/)
-framework and communicates with a Meshtastic node over USB/serial, TCP/WiFi,
-or Bluetooth (BLE).
-
-MeshTTY is designed to run inside [cool-retro-term](https://github.com/Swordfish90/cool-retro-term)
-for a retro CRT look — phosphor glow, scanlines, screen curvature, and bloom
-effects rendered at the terminal emulator level.  It also runs in any standard
-terminal without cool-retro-term.
+MeshTTY is a terminal-based (TUI) client for [Meshtastic](https://meshtastic.org/) LoRa mesh radio networks. It runs on a Raspberry Pi or any Linux/macOS system with a terminal. Built with the [Textual](https://textual.textualize.io/) framework, it connects to a Meshtastic node over USB/serial, TCP/WiFi, or Bluetooth (BLE) and renders a classic 80×24 box-drawing UI that works in any terminal — no desktop environment, GPU, or X server required.
 
 ---
 
@@ -25,26 +15,25 @@ terminal without cool-retro-term.
    - 1.2 [macOS and Ubuntu](#12-macos-and-ubuntu)
    - 1.3 [Manual install](#13-manual-install-any-platform)
 2. [Updating](#2-updating)
-3. [cool-retro-term Integration](#3-cool-retro-term-integration)
-4. [Running MeshTTY](#4-running-meshtty)
-5. [Command-Line Flags](#5-command-line-flags)
-6. [Connection Screen](#6-connection-screen)
-7. [Main Screen](#7-main-screen)
-   - 7.1 [Messages Tab](#71-messages-tab)
-   - 7.2 [Channels Tab](#72-channels-tab)
-   - 7.3 [Nodes Tab](#73-nodes-tab)
-   - 7.4 [Node Detail Modal](#74-node-detail-modal)
-   - 7.5 [Settings Tab](#75-settings-tab)
-   - 7.6 [DM Slash Commands](#76-dm-slash-commands)
-8. [Keyboard Shortcuts](#8-keyboard-shortcuts)
-9. [Configuration File](#9-configuration-file)
-10. [Message & Node Database](#10-message--node-database)
-11. [Themes](#11-themes)
-12. [Debug Logging](#12-debug-logging)
-13. [Serial Port Permissions (Linux)](#13-serial-port-permissions-linux)
-14. [Known Issues & Missing Features](#14-known-issues--missing-features)
-15. [Troubleshooting](#15-troubleshooting)
-16. [Headless / Kiosk Operation (Raspberry Pi)](#16-headless--kiosk-operation-raspberry-pi)
+3. [Running MeshTTY](#3-running-meshtty)
+4. [Command-Line Flags](#4-command-line-flags)
+5. [Connection Screen](#5-connection-screen)
+6. [Main Screen](#6-main-screen)
+   - 6.1 [Messages Tab](#61-messages-tab)
+   - 6.2 [Channels Tab](#62-channels-tab)
+   - 6.3 [Nodes Tab](#63-nodes-tab)
+   - 6.4 [Node Detail Modal](#64-node-detail-modal)
+   - 6.5 [Settings Tab](#65-settings-tab)
+   - 6.6 [DM Slash Commands](#66-dm-slash-commands)
+7. [Keyboard Shortcuts](#7-keyboard-shortcuts)
+8. [Configuration File](#8-configuration-file)
+9. [Message & Node Database](#9-message--node-database)
+10. [Themes](#10-themes)
+11. [Debug Logging](#11-debug-logging)
+12. [Serial Port Permissions (Linux)](#12-serial-port-permissions-linux)
+13. [Known Issues & Missing Features](#13-known-issues--missing-features)
+14. [Troubleshooting](#14-troubleshooting)
+15. [Headless / Kiosk Operation (Raspberry Pi)](#15-headless--kiosk-operation-raspberry-pi)
 
 ---
 
@@ -52,52 +41,45 @@ terminal without cool-retro-term.
 
 ### 1.1 Raspberry Pi and DietPi
 
-Use the dedicated Pi installer — it handles Pi-specific setup including the
-OpenGL driver, GPU memory, X kiosk configuration, and per-model warnings.
-
 ```bash
-git clone https://github.com/kendelmccarley/MeshTTY.git
+git clone https://github.com/kendelmccarrey/MeshTTY.git
 cd MeshTTY
 bash install-pi.sh
 ```
 
-**Supported platforms:**
+**Supported hardware:**
 
 | Hardware | OS | Notes |
 |----------|----|-------|
-| Pi Zero W | DietPi 32-bit, Raspberry Pi OS Lite | ARMv6 — install takes 30–90 min. Be patient. |
-| Pi Zero 2 W | DietPi 32-bit, Raspberry Pi OS Lite | ARMv7 — faster than Zero W |
+| Pi Zero W | Raspberry Pi OS Lite, DietPi 32-bit | ARMv6 — install takes 30–90 min |
+| Pi Zero 2 W | Raspberry Pi OS Lite, DietPi 32-bit | ARMv7 |
 | Pi 3B / 3B+ | Raspberry Pi OS Lite / Desktop | Full support |
 | Pi 4B | Raspberry Pi OS Lite / Desktop | Full support |
 | Pi 5 | Raspberry Pi OS Lite / Desktop | Full support |
 
 The installer will:
 
-- Install system packages via `apt`
-- Optionally install cool-retro-term and a minimal X server (xorg + openbox)
-- Check and configure the OpenGL driver (`vc4-kms-v3d`) if cool-retro-term is requested
-- Check and raise `gpu_mem` if it is set too low (DietPi defaults to 16 MB; cool-retro-term needs ≥ 64 MB)
-- Check available RAM + swap and warn if under 512 MB
+- Install system packages (`python3-full`, `python3-venv`, `bluez`, `fonts-terminus`, etc.)
+- Create a Python virtualenv at `~/.venv/meshtty` (using `--copies` to avoid PEP 668 issues on Bookworm/Trixie)
 - Handle ARMv6 pip failures gracefully (grpcio wheel incompatibility on Pi Zero W)
-- Create a Python virtualenv at `~/.venv/meshtty`
 - Add your user to the `dialout`, `bluetooth`, and `video` groups
 - Generate `meshtty.sh` and make `launch-pi.sh` executable
 - Optionally configure tty1 auto-launch for kiosk operation
+- Optionally enable `loginctl enable-linger` for user systemd services
 
 Log out and back in after the install for group membership to take effect.
 
 ### 1.2 macOS and Ubuntu
 
 ```bash
-git clone https://github.com/kendelmccarley/MeshTTY.git
+git clone https://github.com/kendelmccarrey/MeshTTY.git
 cd MeshTTY
 bash install.sh
 ```
 
 **macOS prerequisite:** [Homebrew](https://brew.sh) must be installed first.
 
-The installer handles system packages, virtualenv, optional cool-retro-term,
-and generates `meshtty.sh`.
+The installer handles system packages, virtualenv creation, and generates `meshtty.sh`.
 
 ### 1.3 Manual install (any platform)
 
@@ -117,10 +99,8 @@ pip install -e .
 | pyserial       | Serial port enumeration and communication        |
 | pypubsub       | Event pub/sub (used internally by meshtastic)    |
 | protobuf       | Meshtastic protocol buffer serialization         |
-| anyio          | Async I/O support                                |
 
-Python 3.11 or newer is required (Python 3.9 on Pi Zero W via system Python is
-sufficient).
+Python 3.11 or newer is required.
 
 ---
 
@@ -133,7 +113,7 @@ bash update.sh
 `update.sh` will:
 
 1. Warn if there are uncommitted local changes before pulling
-2. Run `git pull --ff-only` from the tracked remote branch
+2. Run `git pull --ff-only`
 3. Print a changelog of commits since the last update
 4. Re-run `pip install` only if `requirements.txt` changed
 5. Re-install the local package to pick up source changes
@@ -141,155 +121,64 @@ bash update.sh
 
 ---
 
-## 3. cool-retro-term Integration
-
-MeshTTY's UI is styled to complement [cool-retro-term](https://github.com/Swordfish90/cool-retro-term),
-a terminal emulator that renders GPU-accelerated CRT effects: phosphor glow,
-bloom, scanlines, screen curvature, static noise, and flicker.  Because these
-effects are rendered by the terminal emulator itself, they wrap the MeshTTY
-TUI automatically — no changes to MeshTTY's Python code are needed.
-
-### Install cool-retro-term
-
-```bash
-# macOS
-brew install --cask cool-retro-term
-
-# Raspberry Pi OS / Ubuntu / DietPi
-sudo apt install cool-retro-term
-```
-
-The installers (`install.sh` and `install-pi.sh`) will offer to do this for you.
-
-### OpenGL driver requirement (Raspberry Pi)
-
-cool-retro-term's shaders require the `vc4-kms-v3d` OpenGL driver on all Pi
-models, including the Pi Zero W and Zero 2 W.  `install-pi.sh` checks for
-this and offers to add it to `/boot/config.txt`.  A reboot is required after
-enabling it.
-
-GPU memory must be at least 64 MB.  DietPi defaults to `gpu_mem=16` — the
-installer will detect this and offer to raise it.
-
-### Import a MeshTTY CRT profile
-
-Bundled profiles in `assets/crt-profiles/` are tuned for MeshTTY's TUI.
-Import one **once** after installing cool-retro-term:
-
-1. Open cool-retro-term
-2. **Settings → Profiles → Import**
-3. Choose the profile for your hardware
-
-| File | Best for | Appearance |
-|------|----------|------------|
-| `meshtty-amber.json` | Pi 3/4/5, macOS, Ubuntu | Warm `#ff8100` amber — full CRT effects |
-| `meshtty-phosphor.json` | Pi 3/4/5, macOS, Ubuntu | `#0ccc68` green — full CRT effects |
-| `meshtty-zero.json` | **Pi Zero W / Zero 2 W** | Green phosphor, all GPU-heavy effects disabled |
-
-`meshtty-zero.json` disables scanlines, screen curvature, static noise,
-phosphor burnin, and flicker — leaving only the phosphor color and minimal
-bloom.  This is the right choice for VideoCore IV on Zero hardware where GPU
-headroom is limited.
-
-### Launch with cool-retro-term
-
-**macOS / Ubuntu:**
-```bash
-./launch.sh          # auto-selects cool-retro-term if installed
-./meshtty-crt.sh     # explicit cool-retro-term launcher
-```
-
-**Raspberry Pi:**
-```bash
-./launch-pi.sh       # context-aware: plain terminal over SSH, CRT kiosk on tty
-```
-
-The CRT effects are rendered entirely by cool-retro-term.  MeshTTY's Textual
-themes provide the phosphor color palette so the UI colours match the CRT
-profile.
-
----
-
-## 4. Running MeshTTY
+## 3. Running MeshTTY
 
 ### Raspberry Pi
 
-`launch-pi.sh` is the recommended entry point.  It detects the runtime context
-and chooses the appropriate launcher automatically:
-
-| Context | What happens |
-|---------|-------------|
-| SSH session | Runs in the plain terminal |
-| `$DISPLAY` already set (inside X) | Launches cool-retro-term fullscreen |
-| Physical tty, X + openbox available | Starts X → openbox → cool-retro-term fullscreen |
-| Physical tty, no X | Runs in the plain terminal |
+| Script | Use when |
+|--------|----------|
+| `./launch-pi.sh` | **Recommended.** Physical screen — loads large Terminus font so 80 columns fills the display. Also works over SSH (skips font load). |
+| `./meshtty.sh` | Any terminal — launches directly with no font adjustment. |
 
 ```bash
 ./launch-pi.sh
 ./launch-pi.sh --bot --log    # pass flags through
 ```
 
+`launch-pi.sh` detects whether it is running on the Linux framebuffer console (`$TERM=linux`, not SSH, not X). On the physical screen it loads `Terminus32x16` to scale the 80×24 grid to fill a 1366×768 display. It then sets `TERM=xterm-256color` before launching MeshTTY.
+
 ### macOS / Ubuntu
 
-`launch.sh` auto-detects cool-retro-term and uses it if installed:
-
 ```bash
-./launch.sh                # auto-detect
-./launch.sh --plain        # force plain terminal
-./launch.sh --crt          # force cool-retro-term (errors if not installed)
-./launch.sh --bot --log    # pass flags through
+./launch.sh                # thin wrapper around meshtty.sh
+./meshtty.sh               # direct launcher
+python -m meshtty.main     # using active virtualenv
 ```
 
-### Direct launchers
-
-```bash
-./meshtty.sh               # plain terminal (generated by installer)
-./meshtty-crt.sh           # cool-retro-term (macOS / Ubuntu)
-python -m meshtty.main     # direct, using active virtualenv
-```
-
-The app starts on the **Connection Screen**.  Once connected it switches
-automatically to the **Main Screen**.
+The app starts on the **Connection Screen**. Once connected it switches automatically to the **Main Screen**.
 
 ---
 
-## 5. Command-Line Flags
-
-`--plain` and `--crt` are consumed by `launch.sh`.  All other flags are
-passed through to MeshTTY:
+## 4. Command-Line Flags
 
 | Flag       | Description                                                          |
 |------------|----------------------------------------------------------------------|
 | `--debug`  | Enable DEBUG-level logging to `/tmp/meshtty.log`.                    |
-| `--bot`    | Enable the DM slash-command bot (see section 7.6).                   |
+| `--bot`    | Enable the DM slash-command bot (see section 6.6).                   |
 | `--log`    | Log all inbound and outbound messages to `/tmp/meshtty-messages.log`.|
 | `--noargs` | Clear saved startup flags and launch with no flags active.           |
 | `-h`       | Print help and exit.                                                 |
 
-Flags are persisted across reboots.  The last set of flags used is saved to
-`~/.config/meshtty/last_flags` and replayed on the next launch unless new
-flags are passed explicitly or `--noargs` is used.
+Flags are persisted across reboots. The last set of flags is saved to `~/.config/meshtty/last_flags` and replayed on the next launch unless new flags are passed explicitly or `--noargs` is used.
 
 ---
 
-## 6. Connection Screen
+## 5. Connection Screen
 
-The first screen shown on launch.  Choose how to connect to your radio node.
+The first screen shown on launch. Choose how to connect to your radio node.
 
 ### Tabs
 
 #### SERIAL/USB
 
-- The app scans for serial ports whose USB vendor ID matches common Meshtastic
-  chips and lists them in a table.
-- Click a row to copy that port path into the input field, or type it manually
-  (e.g. `/dev/ttyUSB0`, `/dev/ttyACM0`).
-- Click **CONNECT**.
+- The app scans for serial ports matching common Meshtastic USB chips and lists them in a table.
+- Click a row or type the port path manually (e.g. `/dev/ttyUSB0`, `/dev/ttyACM0`).
+- Press **Enter** or click **CONNECT**.
 
 #### TCP/WIFI
 
 - Enter the hostname or IP address of the node and the port (default 4403).
-- Click **CONNECT**.
+- Press **Enter** or click **CONNECT**.
 
 #### BLE
 
@@ -299,83 +188,70 @@ The first screen shown on launch.  Choose how to connect to your radio node.
 
 ### Remember this device
 
-The **Remember this device** switch (on by default) saves connection details
-so the same transport and address are pre-filled on the next launch.
+The **Remember this device** switch (on by default) saves connection details so the same transport and address are pre-filled on the next launch.
 
 ### Auto-connect
 
-If a device was remembered from a previous session, the connection screen
-starts a 5-second countdown and connects automatically.  Press any key, switch
-tabs, or click a button to cancel.
+If a device was remembered from a previous session, the connection screen starts a 5-second countdown and connects automatically. Press any key, switch tabs, or click a button to cancel.
 
 ### Status messages
 
-Progress is shown in a status line: "Connecting…", "Connected — downloading
-nodes: …", "Download complete…", "Connected! (N nodes loaded)".  Errors appear
-in red below it.
-
-> **Note:** On busy networks, the app transitions to the Main Screen as soon
-> as the initial radio handshake completes.  Node records continue arriving
-> in the background.
+Progress is shown in a status line: *Connecting…*, *Connected — downloading nodes…*, *Download complete…*, *Connected! (N nodes loaded)*. Errors appear in red.
 
 ---
 
-## 7. Main Screen
+## 6. Main Screen
 
-After a successful connection the app switches to the Main Screen, which has
-four tabs.  The status bar across the top shows connection state, active
-channel, node count, and local battery level.
+After a successful connection the app switches to the Main Screen, which has four tabs. The status bar at the top shows connection state and node count.
 
 ---
 
-### 7.1 Messages Tab
+### 6.1 Messages Tab
 
-A unified, scrollable message history for all channels and direct messages,
-plus a compose bar at the bottom.
+A unified, scrollable message history for all channels and direct messages, plus a compose bar at the bottom.
 
 #### Message display
 
 ```
-HH:MM prefix: message text
+HH:MM SenderName: message text
 ```
 
-- **Incoming broadcasts** — labelled with the channel name (`Primary`, `LongFast`, etc.)
-- **Incoming direct messages** — labelled with the sender's short name
-- **Outgoing messages** — indented two spaces, displayed in accent color
-- Long lines wrap aligned under the message text
+- All messages show the **sender's short node name** as the prefix — both channel broadcasts and direct messages.
+- **Outgoing messages** are indented two spaces and displayed in accent colour.
+- Long lines wrap aligned under the message text.
+- The 200 most recent messages are loaded from the local database on startup.
 
 #### Compose bar
 
-Edit the prefix to target a channel or node short name, then type your message:
+The bottom row is split into two focus areas:
 
 ```
-prefix: your message text
+[ Channel   ][ type your message here…               ][ SEND ]
 ```
 
-- Prefix matches a channel name → broadcast on that channel
-- Prefix matches a node short name → direct message to that node
-- Press **Enter** or click **SEND**
+- **Left area (12 chars)** — shows the current channel name or DM node short name. Tab to focus it, then use **Up/Down** to cycle through conversations sorted by most recent message. Press **Enter** to advance to the message input.
+- **Right area** — type your message and press **Enter** or click **SEND**.
 
-#### Scrolling
+Routing:
+- If the selected prefix matches a **channel name** → broadcasts on that channel.
+- If the selected prefix matches a **node short name** → sends as a direct message to that node.
 
-Up/Down arrows and PageUp/PageDown scroll the history regardless of focus.
+#### Scrolling message history
 
-#### History
-
-The 200 most recent messages are loaded from the local database on startup.
+- **Up/Down** — scroll one line when the message history or compose input has focus.
+- **PageUp/PageDown** — scroll one screen from any focus.
 
 ---
 
-### 7.2 Channels Tab
+### 6.2 Channels Tab
 
-Lists all channels configured on the radio.  Click a channel to set it as
-the compose prefix; the app switches to Messages automatically.
+Lists all channels configured on the radio. Updates when the connection is established.
 
 ---
 
-### 7.3 Nodes Tab
+### 6.3 Nodes Tab
 
-Live table of all mesh nodes.  Updates in real time.
+Live table of all mesh nodes heard on the network.
 
 | Column     | Description                                      |
 |------------|--------------------------------------------------|
@@ -387,28 +263,25 @@ Live table of all mesh nodes.  Updates in real time.
 | Position   | GPS coordinates (lat, lon)                       |
 | HW Model   | Hardware model string                            |
 
-**Ctrl+R** forces a refresh.  Click any row to open the Node Detail Modal.
+**Ctrl+R** forces a refresh. Click any row to open the Node Detail Modal.
 
 ---
 
-### 7.4 Node Detail Modal
+### 6.4 Node Detail Modal
 
-Shows node ID, short/long name, hardware model, last SNR, last heard,
-battery level, and GPS position.  Close with **CLOSE**, **Escape**, or **Q**.
-
----
-
-### 7.5 Settings Tab
-
-Configure transport, display, and messaging defaults.  Click **SAVE** to
-apply.  The **Theme** setting takes effect immediately; other settings apply
-on the next connection.
+Shows node ID, short/long name, hardware model, last SNR, last heard, battery level, and GPS position. Close with **CLOSE**, **Escape**, or **Q**.
 
 ---
 
-### 7.6 DM Slash Commands
+### 6.5 Settings Tab
 
-Enable with `--bot`.  Incoming DMs starting with `/` trigger automatic replies:
+Configure transport, display, and messaging defaults. Shows current connection status and a **Disconnect** button. Click **SAVE** to write changes to disk. The **Theme** setting takes effect immediately.
+
+---
+
+### 6.6 DM Slash Commands
+
+Enable with `--bot`. Incoming DMs starting with `/` trigger automatic replies:
 
 | Command    | Response                                              |
 |------------|-------------------------------------------------------|
@@ -416,38 +289,45 @@ Enable with `--bot`.  Incoming DMs starting with `/` trigger automatic replies:
 | `/INFO`    | Returns the MeshTTY repository URL                   |
 | `/JOKE`    | Returns the next joke from the joke file              |
 | `/GPIO`    | Returns exported GPIO pin states                      |
-| `/WEATHER` | Placeholder (not implemented)                         |
-| `/NEWS`    | Placeholder                                           |
 | `/NULL`    | Returns "All is nothingness"                          |
 
-Commands are case-insensitive.  `/JOKE` requires `meshtty/data/shortjokes.csv`
-(not included — compatible file at
-[Kaggle Short Jokes dataset](https://www.kaggle.com/datasets/abhinavmoudgil95/short-jokes)).
+Commands are case-insensitive. `/JOKE` requires `meshtty/data/shortjokes.csv` (not included — compatible file at [Kaggle Short Jokes dataset](https://www.kaggle.com/datasets/abhinavmoudgil95/short-jokes)).
 
 ---
 
-## 8. Keyboard Shortcuts
+## 7. Keyboard Shortcuts
 
 ### Connection Screen
 
 | Key    | Action |
 |--------|--------|
+| Enter  | Connect (from any input field) |
 | Ctrl+Q | Quit   |
 
-### Main Screen
+### Main Screen — Global
 
-| Key       | Action                                     |
-|-----------|--------------------------------------------|
-| F1        | Help overlay                               |
-| Ctrl+T    | Switch to MESSAGES tab                     |
-| Ctrl+L    | Switch to CHANNELS tab                     |
-| Ctrl+N    | Switch to NODES tab                        |
-| Ctrl+S    | Switch to SETTINGS tab                     |
-| ↑ / ↓    | Scroll message history one line            |
-| PgUp/PgDn | Scroll message history one screen          |
-| Ctrl+R    | Refresh node table                         |
-| Ctrl+D    | Disconnect → Connection Screen             |
-| Ctrl+Q    | Quit                                       |
+| Key       | Action                         |
+|-----------|--------------------------------|
+| F1        | Help overlay                   |
+| Ctrl+T    | Switch to MESSAGES tab         |
+| Ctrl+L    | Switch to CHANNELS tab         |
+| Ctrl+N    | Switch to NODES tab            |
+| Ctrl+S    | Switch to SETTINGS tab         |
+| Ctrl+R    | Refresh node table             |
+| Ctrl+D    | Disconnect → Connection Screen |
+| Ctrl+Q    | Quit                           |
+
+### Messages Tab
+
+| Key            | Focus              | Action                              |
+|----------------|--------------------|-------------------------------------|
+| Tab            | anywhere           | Cycle focus: history → channel → input → wrap |
+| Shift+Tab      | anywhere           | Reverse focus cycle                 |
+| Up / Down      | channel selector   | Cycle through channels and DM nodes |
+| Enter          | channel selector   | Advance focus to message input      |
+| Up / Down      | history or input   | Scroll message history              |
+| PageUp/PageDown | anywhere          | Scroll message history              |
+| Enter          | message input      | Send message                        |
 
 ### Node Detail Modal
 
@@ -458,7 +338,7 @@ Commands are case-insensitive.  `/JOKE` requires `meshtty/data/shortjokes.csv`
 
 ---
 
-## 9. Configuration File
+## 8. Configuration File
 
 **Location:** `~/.config/meshtty/config.json`
 
@@ -492,11 +372,11 @@ Created automatically on first run.
 | `db_path`                 | string  | *(see above)* | SQLite database path                 |
 | `default_channel`         | integer | `0`           | Default channel index (0–7)          |
 | `node_short_name_display` | boolean | `true`        | Use short names in Nodes table       |
-| `theme`                   | string  | `"crt-amber"` | UI theme (see section 11)            |
+| `theme`                   | string  | `"crt-amber"` | UI theme (see section 10)            |
 
 ---
 
-## 10. Message & Node Database
+## 9. Message & Node Database
 
 **Location:** `~/.config/meshtty/messages.db`
 
@@ -514,7 +394,7 @@ SQLite database created automatically.
 | `text`           | TEXT    | Message text                                       |
 | `rx_time`        | INTEGER | Unix timestamp (seconds)                           |
 | `is_mine`        | INTEGER | `1` = sent, `0` = received                        |
-| `display_prefix` | TEXT    | Human-readable prefix at send/receive time         |
+| `display_prefix` | TEXT    | Sender short name at time of receipt               |
 
 ### `nodes` table
 
@@ -543,23 +423,21 @@ SELECT node_id, short_name, long_name, battery, last_snr FROM nodes;
 
 ---
 
-## 11. Themes
+## 10. Themes
 
-Three built-in themes selectable from SETTINGS → Theme.  Each is drawn from
-a cool-retro-term color profile — pair them for the full effect.
+Three built-in themes selectable from **Settings → Theme**. Each uses a phosphor-inspired colour palette designed to look good in any terminal.
 
-| Config value   | Label          | CRT profile             | Appearance                              |
-|----------------|----------------|-------------------------|-----------------------------------------|
-| `crt-amber`    | Amber          | meshtty-amber.json      | Warm `#ff8100` amber on black. **Default.** |
-| `crt-phosphor` | Green Phosphor | meshtty-phosphor.json   | Classic `#0ccc68` green on black        |
-| `crt-ibm`      | IBM VGA        | *(no dedicated profile)*| Cool `#c0c0c0` grey on black            |
+| Config value   | Label          | Appearance                                  |
+|----------------|----------------|---------------------------------------------|
+| `crt-amber`    | Amber          | Warm `#ff8100` amber on black. **Default.** |
+| `crt-phosphor` | Green Phosphor | Classic `#0ccc68` green on black            |
+| `crt-ibm`      | IBM / Grey     | Cool `#c0c0c0` grey on black                |
 
-On Pi Zero W / Zero 2 W, pair any theme with `meshtty-zero.json` in
-cool-retro-term rather than the full-effects profiles.
+The **Theme** setting in the Settings tab takes effect immediately without restarting.
 
 ---
 
-## 12. Debug Logging
+## 11. Debug Logging
 
 ```bash
 ./launch-pi.sh --debug    # Pi
@@ -571,15 +449,14 @@ tail -f /tmp/meshtty.log
 
 | Error | Likely cause |
 |-------|-------------|
-| `PermissionError: [Errno 13] ... '/dev/ttyUSB0'` | Not in `dialout` group — see section 13 |
+| `PermissionError: [Errno 13] ... '/dev/ttyUSB0'` | Not in `dialout` group — see section 12 |
 | `serial.serialutil.SerialException: could not open port` | Wrong port or device not plugged in |
 | `ConnectionRefusedError` | TCP host/port wrong or node unreachable |
 | `_waitConnected timed out but N nodes present` | Noisy serial stream — transport forces connection and proceeds |
-| `waitForConfig timed out but myInfo and N nodes present` | Incomplete radio config — usually harmless |
 
 ---
 
-## 13. Serial Port Permissions
+## 12. Serial Port Permissions
 
 ### Linux (Raspberry Pi OS, DietPi, Ubuntu)
 
@@ -587,30 +464,27 @@ tail -f /tmp/meshtty.log
 sudo usermod -aG dialout $USER
 ```
 
-Log out and back in.  Verify with `groups` — output should include `dialout`.
+Log out and back in. Verify with `groups` — output should include `dialout`.
 
 Both `install.sh` and `install-pi.sh` handle this automatically.
 
 ### macOS
 
-No group membership required.  Serial devices appear as `/dev/cu.usbserial-XXXX`
-or `/dev/cu.SLAB_USBtoUART`.  Run `ls /dev/cu.*` with the radio plugged in.
+No group membership required. Serial devices appear as `/dev/cu.usbserial-XXXX` or `/dev/cu.SLAB_USBtoUART`. Run `ls /dev/cu.*` with the radio plugged in.
 
 ---
 
-## 14. Known Issues & Missing Features
+## 13. Known Issues & Missing Features
 
 ### Confirmed bugs
 
-- **`display_prefix` missing from old database rows** — Messages stored before
-  this version fall back to displaying the raw `from_id` node string.
+- Messages stored before the `display_prefix` column was added fall back to displaying the raw `from_id` node string.
+- BLE transport is largely untested.
 
 ### Not yet implemented
 
-- Channel switching confirmation
 - Message acknowledgement display
 - Persistent compose prefix across sessions
-- BLE transport (largely untested)
 - Node position map view
 - Channel creation / management
 - Firmware version / radio config display
@@ -618,25 +492,22 @@ or `/dev/cu.SLAB_USBtoUART`.  Run `ls /dev/cu.*` with the radio plugged in.
 
 ---
 
-## 15. Troubleshooting
+## 14. Troubleshooting
 
 ### Slow connection or hangs during node download
 
-Run with `--debug` and watch the log.  Timeouts like
-`_waitConnected timed out but N nodes present` are usually harmless — the
-transport forces a connection and node records continue arriving.  If
-completely stuck, quit (Ctrl+Q) and reconnect.
+Run with `--debug` and watch the log. Timeouts like `_waitConnected timed out but N nodes present` are usually harmless — the transport forces a connection and node records continue arriving. If completely stuck, quit (Ctrl+Q) and reconnect.
 
 ### Serial device detected but connection fails
 
 1. Run with `--debug`, check `/tmp/meshtty.log`
-2. Confirm `dialout` group membership (section 13)
+2. Confirm `dialout` group membership (section 12)
 3. Unplug and re-plug the USB cable
 4. Test with the CLI: `meshtastic --port /dev/ttyUSB0 --info`
 
 ### No serial devices in the auto-scan list
 
-The scanner filters by USB vendor ID.  Supported chips:
+The scanner filters by USB vendor ID. Supported chips:
 
 | Chip                | USB VID |
 |---------------------|---------|
@@ -649,61 +520,25 @@ If your adapter uses a different chip, enter the port path manually.
 
 ### BLE issues on Pi Zero W
 
-The Pi Zero W's combined Wi-Fi/BT chip (CYW43438) can cause interference
-between Wi-Fi and BLE.  If BLE scanning fails or connections drop:
+The Pi Zero W's combined Wi-Fi/BT chip (CYW43438) can cause interference. If BLE scanning fails:
 
 - Ensure BlueZ is version 5.55 or newer: `bluetoothctl --version`
-- Try disabling Wi-Fi while using BLE: `rfkill block wifi`
-- Use serial or TCP transport instead — they are more reliable on Zero hardware
-
-### cool-retro-term fails to open on Pi
-
-Most likely cause: OpenGL driver not configured.  Check:
-
-```bash
-grep -E "vc4|dtoverlay" /boot/config.txt
-```
-
-If `vc4-kms-v3d` is not present, add it and reboot:
-
-```bash
-echo "dtoverlay=vc4-kms-v3d" | sudo tee -a /boot/config.txt
-sudo reboot
-```
-
-Also check `gpu_mem`:
-
-```bash
-grep gpu_mem /boot/config.txt
-```
-
-If it is set to less than 64, change it to `gpu_mem=64` and reboot.
-DietPi defaults to `gpu_mem=16` — `install-pi.sh` will detect and fix this.
+- Try disabling Wi-Fi: `rfkill block wifi`
+- Use serial or TCP transport instead — more reliable on Zero hardware.
 
 ### Pi Zero W: pip install fails or takes very long
 
-The Pi Zero W (ARMv6, single-core 1 GHz) is slow to compile Python packages.
-Expected install time is 30–90 minutes.  Do not interrupt pip once it starts.
+Expected install time is 30–90 minutes. Do not interrupt pip once it starts.
 
-If pip fails with a `grpcio` or "illegal instruction" error, `install-pi.sh`
-handles this automatically by retrying without `grpcio` (meshtastic ≥ 2.5 no
-longer requires it).  If running pip manually:
-
-```bash
-pip install textual meshtastic pyserial bleak pypubsub protobuf anyio
-```
+If pip fails with a `grpcio` or "illegal instruction" error, `install-pi.sh` retries without `grpcio` automatically (meshtastic ≥ 2.5 no longer requires it).
 
 ### DietPi: swap too low for pip install
-
-DietPi's zram swap may not be enough for compiling packages on a Zero W.
-Increase it via:
 
 ```
 dietpi-config → Performance Options → Swap
 ```
 
-Set to 1024 MB for the install, then reduce back to 256 MB afterward to
-preserve SD card write life.
+Set to 1024 MB for the install, then reduce back to 256 MB afterward.
 
 ### Config file ignored or reset
 
@@ -711,29 +546,26 @@ preserve SD card write life.
 python3 -m json.tool ~/.config/meshtty/config.json
 ```
 
-If `"theme"` contains an unrecognised value, the app silently resets it to
-`crt-amber`.
+If `"theme"` contains an unrecognised value, the app silently resets it to `crt-amber`.
 
 ---
 
-## 16. Headless / Kiosk Operation (Raspberry Pi)
+## 15. Headless / Kiosk Operation (Raspberry Pi)
 
-MeshTTY is designed to run as a full-screen kiosk on a headless Pi connected
-to a physical display — no desktop environment required.
+MeshTTY runs as a full-screen terminal application on a headless Pi with a physical display — no desktop environment, X server, or GPU required.
 
 ### Setup
 
 1. Configure console auto-login:
    - **Raspberry Pi OS:** `sudo raspi-config` → System Options → Boot / Auto Login → Console Autologin
-   - **DietPi:** `dietpi-config` → AutoStart Options → set to `0` (console autologin), or run `sudo dietpi-autostart`
-2. Run `install-pi.sh` and answer **Y** when asked about auto-launch and cool-retro-term
+   - **DietPi:** `dietpi-config` → AutoStart Options → set to `0` (console autologin)
+2. Run `install-pi.sh` and answer **Y** when asked about auto-launch on tty1.
 
 The installer adds a block to `~/.bash_profile`:
 
 ```bash
 # MeshTTY auto-launch on tty1 (physical Pi screen)
 if [[ "$(tty)" == "/dev/tty1" ]]; then
-    export TERM=xterm-256color
     while true; do
         /path/to/MeshTTY/launch-pi.sh
         sleep 2
@@ -741,33 +573,17 @@ if [[ "$(tty)" == "/dev/tty1" ]]; then
 fi
 ```
 
-`launch-pi.sh` detects whether X is available and starts it if so, or falls
-back to the plain terminal — no manual configuration needed.
-
-### Boot sequence with cool-retro-term kiosk
+### Boot sequence
 
 | Step | What happens |
 |------|-------------|
 | Pi boots, user auto-logs in on tty1 | `~/.bash_profile` starts restart loop |
-| `launch-pi.sh` runs | Detects X + openbox available |
-| `startx` launches | openbox starts, runs `~/.config/openbox/autostart` |
-| Autostart runs | `cool-retro-term` opens fullscreen with `meshtty.sh` inside |
-| Openbox rc.xml rule | Forces cool-retro-term fullscreen, no window decorations |
-| MeshTTY starts | Connection screen appears |
-| User quits MeshTTY | cool-retro-term closes, autostart calls `openbox --exit` |
-| X shuts down | `startx` returns to `launch-pi.sh` |
-| Restart loop fires | `sleep 2`, then everything starts again |
-
-**Emergency exit:** Ctrl+Alt+Backspace shuts down X immediately.
-
-### Boot sequence without cool-retro-term (plain terminal)
-
-| Step | What happens |
-|------|-------------|
-| Pi boots, user auto-logs in on tty1 | `~/.bash_profile` starts restart loop |
-| `launch-pi.sh` runs | No X available — runs `meshtty.sh` directly |
-| MeshTTY starts in the console TTY | Connection screen appears |
+| `launch-pi.sh` runs | Loads large Terminus font for framebuffer scaling |
+| Sets `TERM=xterm-256color` | Ensures Textual renders correctly |
+| Launches `meshtty.sh` | MeshTTY starts, connection screen appears |
 | App exits for any reason | `sleep 2`, then restarts |
+
+`launch-pi.sh` skips the font load automatically when running over SSH or inside X/Wayland.
 
 ### Troubleshooting a headless Pi
 
@@ -776,15 +592,12 @@ SSH in to investigate without disturbing the console:
 ```bash
 ssh user@<pi-hostname>
 tail -f /tmp/meshtty.log
-cat /tmp/meshtty-x.log      # X server errors if cool-retro-term kiosk fails
 ```
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| Black screen / nothing starts | User not in `dialout` group | `sudo usermod -aG dialout $USER` then reboot |
+| Blank screen / nothing starts | User not in `dialout` group | `sudo usermod -aG dialout $USER` then reboot |
 | "Waiting for USB serial device…" then fails | Radio not plugged in | Plug in before booting; check `dmesg \| grep tty` |
 | Auto-connect does not fire | No saved device | Connect once manually with **Remember this device** checked |
-| X starts but cool-retro-term is blank / crashes | OpenGL driver missing or gpu_mem too low | See section 15 — add `vc4-kms-v3d` and set `gpu_mem=64` |
-| cool-retro-term opens but immediately closes | `meshtty.sh` not found or virtualenv missing | Re-run `install-pi.sh` |
-| App crashes immediately on tty | `TERM` not set | Ensure `~/.bash_profile` sets `TERM=xterm-256color` |
-| Pi Zero W install hangs for >90 min | Normal on ARMv6 | Wait — do not interrupt |
+| Text too small on physical screen | Terminus font not installed | `sudo apt install fonts-terminus` |
+| App crashes immediately | `TERM` not set | Ensure `TERM=xterm-256color` is exported before launch |
