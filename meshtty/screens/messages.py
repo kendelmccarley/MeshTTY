@@ -56,6 +56,13 @@ class MessagesView(Widget):
         except Exception:
             pass
 
+    def on_node_updated(self, event) -> None:
+        """Keep _short_to_node_id current as nodes check in over time."""
+        try:
+            self._refresh_conversations()
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # Conversation list helpers
     # ------------------------------------------------------------------
