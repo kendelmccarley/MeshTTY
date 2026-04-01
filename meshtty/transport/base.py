@@ -37,10 +37,22 @@ class TransportManager(ABC):
             return {}
         return self._interface.getMyNodeInfo() or {}
 
+    # Meshtastic firmware sometimes writes the modem-preset name into
+    # channel[0].settings.name.  Treat these as "unnamed" so channel 0
+    # always displays as "Primary", matching official app behaviour.
+    _MODEM_PRESET_NAMES = {
+        "longfast", "longslow", "longmoderate", "longmoder",
+        "mediumfast", "mediumslow",
+        "shortfast", "shortslow", "shortturbo",
+        "vlongslow", "vlong_slow",
+    }
+
     def get_channels(self) -> list[tuple[int, str]]:
         """Return list of (index, name) for configured (non-disabled) channels.
 
         Falls back to [(0, 'Primary')] if channel config is unavailable.
+        Channel 0 is always labelled 'Primary' when its configured name is
+        empty or matches a Meshtastic modem-preset name.
         """
         if self._interface is None:
             return [(0, "Primary")]
@@ -53,6 +65,9 @@ class TransportManager(ABC):
                     try:
                         name = ch.settings.name.strip()
                     except Exception:
+                        name = ""
+                    # Primary channel: ignore modem-preset-sounding names
+                    if i == 0 and name.lower().replace("_", "") in self._MODEM_PRESET_NAMES:
                         name = ""
                     display = name if name else ("Primary" if i == 0 else f"Ch {i}")
                     result.append((i, display))

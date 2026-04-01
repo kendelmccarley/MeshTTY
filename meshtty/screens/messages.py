@@ -29,6 +29,10 @@ class MessagesView(Widget):
         self._last_prefix: str = ""
         self._conversations: list[str] = []
         self._conv_index: int = 0
+        # Mapping built during _build_conversations: short_name → raw node_id
+        # key (string "!hexid") so _resolve_send_destination doesn't need to
+        # re-scan a potentially integer-keyed interface.nodes at send time.
+        self._short_to_node_id: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
         yield MessageView(id="message-view")
@@ -62,17 +66,32 @@ class MessagesView(Widget):
         Includes all channels (always), all nodes with message history (sorted
         by last rx_time), and all other known nodes (appended at the end with
         time=-1 so they sort last).
+
+        Also rebuilds self._short_to_node_id so _resolve_send_destination can
+        route DMs without re-scanning a possibly integer-keyed interface.nodes.
         """
         prefix_times: dict[str, int] = {}
+        short_to_node: dict[str, str] = {}  # short_name → canonical "!hexid"
         transport = self.app.transport
         nodes = transport.get_nodes() if transport else {}
 
-        def _short(node_id: str) -> str:
+        def _node_hex_id(nid) -> str:
+            """Return a '!hexid' string for any node key (str or int)."""
+            s = str(nid)
+            if s.startswith("!"):
+                return s
+            try:
+                return f"!{int(s):08x}"
+            except (ValueError, TypeError):
+                return s
+
+        def _short(node_id) -> str:
             """Return short name for a node_id, or empty string if not found."""
             node = nodes.get(node_id) or {}
             user = (node.get("user") or {})
             short = user.get("shortName", "").strip()
             if short:
+                short_to_node[short] = _node_hex_id(node_id)
                 return short
             needle = str(node_id).lstrip("!").lower()
             for nid, ndata in nodes.items():
@@ -82,6 +101,7 @@ class MessagesView(Widget):
                     user = (ndata.get("user") or {})
                     short = user.get("shortName", "").strip()
                     if short:
+                        short_to_node[short] = _node_hex_id(nid)
                         return short
             return ""
 
@@ -120,8 +140,12 @@ class MessagesView(Widget):
                 continue
             user = (ndata.get("user") or {})
             short = user.get("shortName", "").strip()
-            if short and short not in prefix_times:
-                prefix_times[short] = -1  # known but no message history yet
+            if short:
+                short_to_node[short] = _node_hex_id(node_id)
+                if short not in prefix_times:
+                    prefix_times[short] = -1  # known but no message history yet
+
+        self._short_to_node_id = short_to_node
 
         if not prefix_times:
             return ["Primary"]
@@ -280,17 +304,40 @@ class MessagesView(Widget):
         return fid[-8:] if len(fid) > 8 else fid
 
     def _resolve_send_destination(self, prefix: str) -> tuple[int | None, str]:
-        """Return (channel_idx, dest_id) from a prefix string."""
+        """Return (channel_idx, dest_id) from a prefix string.
+
+        dest_id is always a '!hexid' string (never an integer) so that
+        transport.send_text() receives a consistently typed destination arg.
+        """
         transport = self.app.transport
         if transport:
+            # "Primary" is a universal alias for channel 0
+            if prefix.lower() == "primary":
+                return (0, "^all")
             for idx, name in transport.get_channels():
                 if name.lower() == prefix.lower():
                     return (idx, "^all")
+
+            # Use the mapping built during _build_conversations — avoids
+            # re-scanning interface.nodes which may be integer-keyed
+            node_hex = self._short_to_node_id.get(prefix) or self._short_to_node_id.get(
+                next((k for k in self._short_to_node_id if k.lower() == prefix.lower()), ""), ""
+            )
+            if node_hex:
+                return (None, node_hex)
+
+            # Fallback: live scan of interface.nodes, normalise key to !hexid
             for node_id, node in transport.get_nodes().items():
                 user = node.get("user", {}) if node else {}
                 short = user.get("shortName", "").strip()
                 if short and short.lower() == prefix.lower():
-                    return (None, node_id)
+                    s = str(node_id)
+                    if not s.startswith("!"):
+                        try:
+                            s = f"!{int(s):08x}"
+                        except (ValueError, TypeError):
+                            pass
+                    return (None, s)
         return (0, "^all")
 
     def _log(self, direction: str, prefix: str, text: str) -> None:
