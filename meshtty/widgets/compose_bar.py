@@ -39,6 +39,7 @@ class PrefixSelector(Input):
     def on_key(self, event: Key) -> None:
         if event.key in ("enter", "tab"):
             event.stop()
+            event.prevent_default()
             try:
                 self.app.query_one("#compose-input").focus()
             except Exception:
@@ -46,6 +47,7 @@ class PrefixSelector(Input):
             return
         if event.key == "shift+tab":
             event.stop()
+            event.prevent_default()
             try:
                 self.app.query_one("#message-view").focus()
             except Exception:
@@ -112,7 +114,13 @@ class ComposeBar(Widget):
             pass
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        if event.input.id == "compose-input":
+        if event.input.id == "prefix-selector":
+            event.stop()
+            try:
+                self.query_one("#compose-input", Input).focus()
+            except Exception:
+                pass
+        elif event.input.id == "compose-input":
             self._do_send()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

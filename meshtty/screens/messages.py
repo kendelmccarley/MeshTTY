@@ -228,10 +228,12 @@ class MessagesView(Widget):
         if event.key == "tab":
             self._move_focus(1)
             event.stop()
+            event.prevent_default()
             return
         if event.key == "shift+tab":
             self._move_focus(-1)
             event.stop()
+            event.prevent_default()
             return
         if event.key == "enter" and focused_id == "prefix-selector":
             try:
@@ -286,12 +288,20 @@ class MessagesView(Widget):
         short = user.get("shortName", "").strip()
         if short:
             return short
-        # Secondary scan: strip '!' and compare lowercase
+        # Secondary scan: normalise both sides to bare hex before comparing.
+        # meshtastic-python may key nodes by integer or by '!hexid' string;
+        # str(integer) is decimal, not hex, so we must convert before matching.
         needle = node_id.lstrip("!").lower()
         for nid, ndata in nodes.items():
             if not ndata:
                 continue
-            if str(nid).lstrip("!").lower() == needle:
+            nid_str = str(nid)
+            if not nid_str.startswith("!"):
+                try:
+                    nid_str = f"!{int(nid_str):08x}"
+                except (ValueError, TypeError):
+                    pass
+            if nid_str.lstrip("!").lower() == needle:
                 user = (ndata.get("user") or {})
                 short = user.get("shortName", "").strip()
                 if short:
@@ -396,11 +406,17 @@ class MessagesView(Widget):
                     self._log("TX", prefix, reply)
                     return
 
-            # Normal message handling
+            # Normal message handling — display is isolated from housekeeping
             prefix = self._resolve_incoming_prefix(event)
-            self._last_prefix = prefix
             view = self.query_one("#message-view", MessageView)
             view.append_message(prefix=prefix, text=event.text, rx_time=event.rx_time)
+        except Exception:
+            return
+
+        # Housekeeping: DB write, log, conversation refresh.  Failures here
+        # must not suppress the already-displayed message.
+        self._last_prefix = prefix
+        try:
             self._write_message(
                 event.from_id,
                 event.to_id,
@@ -411,8 +427,13 @@ class MessagesView(Widget):
                 event.packet_id,
                 prefix,
             )
+        except Exception:
+            pass
+        try:
             self._log("RX", prefix, event.text)
-            # Rebuild conversation list so new sender appears at the top
+        except Exception:
+            pass
+        try:
             self._refresh_conversations()
         except Exception:
             pass
