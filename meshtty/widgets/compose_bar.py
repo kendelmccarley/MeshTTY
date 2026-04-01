@@ -51,10 +51,8 @@ class PrefixSelector(Input):
             except Exception:
                 pass
             return
-        # up/down: don't consume — let them bubble to MessagesView.on_key for cycling
-        if event.key in ("up", "down"):
-            return
-        super().on_key(event)
+        # up/down and all other keys: don't consume — Input._on_key handles
+        # character insertion separately; unhandled keys bubble naturally
 
 
 class ComposeBar(Widget):
