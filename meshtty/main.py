@@ -54,6 +54,13 @@ def _setup_logging(level: str, debug: bool = False) -> None:
         mesh_log.addHandler(handler)
     mesh_log.propagate = False
 
+    # Diagnostic logger — always on at WARNING so packet dumps always reach disk.
+    diag_log = logging.getLogger("meshtty.diag")
+    diag_log.setLevel(logging.WARNING)
+    if not diag_log.handlers:
+        diag_log.addHandler(handler)
+    diag_log.propagate = False
+
 
 class MeshTTYApp(App):
     """The root Textual application."""
