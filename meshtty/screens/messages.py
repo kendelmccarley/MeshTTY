@@ -341,13 +341,29 @@ class MessagesView(Widget):
     # Prefix resolution helpers
     # ------------------------------------------------------------------
 
+    def _channel_name_for(self, channel_idx: int) -> str:
+        """Return the channel name for a given channel index."""
+        transport = self.app.transport
+        if transport:
+            for idx, name in transport.get_channels():
+                if idx == channel_idx:
+                    return name
+        return "Primary" if channel_idx == 0 else str(channel_idx)
+
     def _resolve_incoming_prefix(self, event: TextMessageReceived) -> str:
-        """Return the sender's short name for display."""
+        """Return the display prefix for an incoming message.
+
+        Channel messages: "ChannelName/SenderShort"
+        DMs:              "SenderShort"
+        """
         short = self._short_name_for(event.from_id)
-        if short:
-            return short
-        fid = event.from_id or "?"
-        return fid[-8:] if len(fid) > 8 else fid
+        if not short:
+            fid = event.from_id or "?"
+            short = fid[-8:] if len(fid) > 8 else fid
+        if event.to_id == "^all":
+            channel_name = self._channel_name_for(event.channel)
+            return f"{channel_name}/{short}"
+        return short
 
     def _resolve_send_destination(self, prefix: str) -> tuple[int | None, str]:
         """Return (channel_idx, dest_id) from a prefix string.
