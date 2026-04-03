@@ -44,6 +44,22 @@ class NodeListView(Widget):
         if transport is None:
             return
         nodes = transport.get_nodes()
+        for node_id, node in nodes.items():
+            user = (node.get("user") or {})
+            pos = (node.get("position") or {})
+            metrics = (node.get("deviceMetrics") or {})
+            info = {
+                "short_name": user.get("shortName", ""),
+                "long_name": user.get("longName", ""),
+                "hw_model": user.get("hwModel", ""),
+                "last_snr": node.get("snr"),
+                "last_lat": pos.get("latitude"),
+                "last_lon": pos.get("longitude"),
+                "last_alt": pos.get("altitude"),
+                "battery": metrics.get("batteryLevel"),
+                "last_heard": node.get("lastHeard"),
+            }
+            self.app.db.upsert_node(str(node_id), info)
         self.app.call_from_thread(self._apply_nodes, nodes)
 
     def _apply_nodes(self, nodes: dict) -> None:

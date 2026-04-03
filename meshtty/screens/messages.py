@@ -81,6 +81,10 @@ class MessagesView(Widget):
         short_to_node: dict[str, str] = {}  # short_name → canonical "!hexid"
         transport = self.app.transport
         nodes = transport.get_nodes() if transport else {}
+        try:
+            db_nodes = self.app.db.get_all_nodes()
+        except Exception:
+            db_nodes = {}
 
         def _node_hex_id(nid) -> str:
             """Return a '!hexid' string for any node key (str or int)."""
@@ -93,7 +97,7 @@ class MessagesView(Widget):
                 return s
 
         def _short(node_id) -> str:
-            """Return short name for a node_id, or empty string if not found."""
+            """Return short name for a node_id, checking transport then DB."""
             node = nodes.get(node_id) or {}
             user = (node.get("user") or {})
             short = user.get("shortName", "").strip()
@@ -109,6 +113,13 @@ class MessagesView(Widget):
                     short = user.get("shortName", "").strip()
                     if short:
                         short_to_node[short] = _node_hex_id(nid)
+                        return short
+            # Fallback: DB nodes table
+            for nid, row in db_nodes.items():
+                if nid.lstrip("!").lower() == needle:
+                    short = (row.get("short_name") or "").strip()
+                    if short:
+                        short_to_node[short] = nid
                         return short
             return ""
 
@@ -151,6 +162,16 @@ class MessagesView(Widget):
                 short_to_node[short] = _node_hex_id(node_id)
                 if short not in prefix_times:
                     prefix_times[short] = -1  # known but no message history yet
+
+        # Merge nodes from DB that aren't already in the list from transport
+        for nid, row in db_nodes.items():
+            short = (row.get("short_name") or "").strip()
+            if not short:
+                continue
+            if short not in short_to_node:
+                short_to_node[short] = nid
+            if short not in prefix_times:
+                prefix_times[short] = -1
 
         self._short_to_node_id = short_to_node
 
@@ -274,38 +295,46 @@ class MessagesView(Widget):
     def _short_name_for(self, node_id: str) -> str:
         """Return a node's short name given its ID, with fallback search.
 
-        Meshtastic keys nodes by hex string (e.g. '!a1b2c3d4').  The fromId
-        in a packet should match, but we do a secondary scan stripping the
-        '!' prefix and lowercasing to be safe.
+        Tries the live transport node table first, then falls back to the
+        persisted DB nodes table so names resolve even after reconnect.
         """
         transport = self.app.transport
-        if not transport:
-            return ""
-        nodes = transport.get_nodes()
-        # Direct lookup
-        node = nodes.get(node_id) or {}
-        user = (node.get("user") or {})
-        short = user.get("shortName", "").strip()
-        if short:
-            return short
-        # Secondary scan: normalise both sides to bare hex before comparing.
-        # meshtastic-python may key nodes by integer or by '!hexid' string;
-        # str(integer) is decimal, not hex, so we must convert before matching.
-        needle = node_id.lstrip("!").lower()
-        for nid, ndata in nodes.items():
-            if not ndata:
-                continue
-            nid_str = str(nid)
-            if not nid_str.startswith("!"):
-                try:
-                    nid_str = f"!{int(nid_str):08x}"
-                except (ValueError, TypeError):
-                    pass
-            if nid_str.lstrip("!").lower() == needle:
-                user = (ndata.get("user") or {})
-                short = user.get("shortName", "").strip()
-                if short:
-                    return short
+        if transport:
+            nodes = transport.get_nodes()
+            # Direct lookup
+            node = nodes.get(node_id) or {}
+            user = (node.get("user") or {})
+            short = user.get("shortName", "").strip()
+            if short:
+                return short
+            # Secondary scan: normalise both sides to bare hex before comparing.
+            needle = node_id.lstrip("!").lower()
+            for nid, ndata in nodes.items():
+                if not ndata:
+                    continue
+                nid_str = str(nid)
+                if not nid_str.startswith("!"):
+                    try:
+                        nid_str = f"!{int(nid_str):08x}"
+                    except (ValueError, TypeError):
+                        pass
+                if nid_str.lstrip("!").lower() == needle:
+                    user = (ndata.get("user") or {})
+                    short = user.get("shortName", "").strip()
+                    if short:
+                        return short
+
+        # Fallback: persisted DB nodes table
+        try:
+            needle = node_id.lstrip("!").lower()
+            for nid, row in self.app.db.get_all_nodes().items():
+                if nid.lstrip("!").lower() == needle:
+                    short = (row.get("short_name") or "").strip()
+                    if short:
+                        return short
+        except Exception:
+            pass
+
         return ""
 
     # ------------------------------------------------------------------

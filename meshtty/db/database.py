@@ -157,5 +157,15 @@ class Database:
             )
             self._conn.commit()
 
+    def get_all_nodes(self) -> dict[str, dict]:
+        """Return {node_id: {short_name, long_name, ...}} for all persisted nodes."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT node_id, short_name, long_name, hw_model, "
+                "last_snr, last_lat, last_lon, last_alt, battery, last_heard "
+                "FROM nodes"
+            )
+            return {row["node_id"]: dict(row) for row in cur.fetchall()}
+
     def close(self) -> None:
         self._conn.close()
