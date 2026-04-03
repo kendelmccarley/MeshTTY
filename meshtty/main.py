@@ -44,7 +44,8 @@ def _setup_logging(level: str, debug: bool = False) -> None:
     # consuming significant CPU for string formatting.
     app_log = logging.getLogger("meshtty")
     app_log.setLevel(effective_level)
-    app_log.addHandler(handler)
+    if not app_log.handlers:
+        app_log.addHandler(handler)
     app_log.propagate = False  # don't double-log via root
 
     # Capture meshtastic library warnings/errors but suppress its debug spam.

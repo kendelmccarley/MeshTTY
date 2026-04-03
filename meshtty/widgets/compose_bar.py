@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.widget import Widget
@@ -12,13 +11,6 @@ from textual.widgets import Button, Input
 
 class PrefixSelector(Input):
     """Editable channel/node name field. Up/Down cycles; Enter/Tab advances to compose."""
-
-    # priority=True ensures these fire before Screen-level Tab/Enter bindings.
-    BINDINGS = [
-        Binding("tab", "focus_compose", show=False, priority=True),
-        Binding("enter", "focus_compose", show=False, priority=True),
-        Binding("shift+tab", "focus_view", show=False, priority=True),
-    ]
 
     DEFAULT_CSS = """
     PrefixSelector {
@@ -42,18 +34,6 @@ class PrefixSelector(Input):
 
     def set_value(self, prefix: str) -> None:
         self.value = prefix
-
-    def action_focus_compose(self) -> None:
-        try:
-            self.app.query_one("#compose-input").focus()
-        except Exception:
-            pass
-
-    def action_focus_view(self) -> None:
-        try:
-            self.app.query_one("#message-view").focus()
-        except Exception:
-            pass
 
 
 class ComposeBar(Widget):
