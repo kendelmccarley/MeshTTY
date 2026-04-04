@@ -137,6 +137,10 @@ class SettingsView(Widget):
 
     def on_show(self) -> None:
         self._refresh_connection_status()
+        try:
+            self.query_one("#sel-transport").focus()
+        except Exception:
+            pass
 
     def _refresh_connection_status(self) -> None:
         try:

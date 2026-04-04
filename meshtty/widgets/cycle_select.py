@@ -55,7 +55,7 @@ class CycleSelect(Widget):
         if event.key == "left":
             self._cycle(-1)
             event.stop()
-        elif event.key == "right":
+        elif event.key in ("right", "space", "enter"):
             self._cycle(1)
             event.stop()
 

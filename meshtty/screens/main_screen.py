@@ -186,7 +186,7 @@ class MainScreen(Screen):
             elif next_id == "tab-nodes":
                 self.query_one("DataTable").focus()
             elif next_id == "tab-settings":
-                self.query_one("#settings-view").focus()
+                self.query_one("#sel-transport").focus()
         except Exception:
             pass
 
