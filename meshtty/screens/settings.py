@@ -71,14 +71,8 @@ class SettingsView(Widget):
     def compose(self) -> ComposeResult:
         cfg = self.app.config
 
-        yield Label("Connection", classes="section-header")
-
-        with Vertical(classes="row"):
-            yield Label("Disconnected", id="conn-status-label")
-
+        yield Label("Disconnected", id="conn-status-label")
         yield Button("Disconnect", id="disconnect-btn", variant="error", disabled=True)
-
-        yield Label("Transport", classes="section-header")
 
         with Vertical(classes="row"):
             yield Label("Default transport")
