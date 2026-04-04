@@ -30,7 +30,8 @@ class CycleSelect(Widget):
         padding: 0;
     }
     CycleSelect:focus {
-        color: $accent;
+        color: $background;
+        background: $primary;
     }
     """
 

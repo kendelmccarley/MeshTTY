@@ -162,7 +162,7 @@ ChannelView ListItem {
 }
 
 ChannelView ListItem.--highlight {
-    background: $primary 30%;
+    background: $primary;
     color: $background;
     text-style: bold;
 }
@@ -192,8 +192,8 @@ DataTable > .datatable--header {
 }
 
 DataTable > .datatable--cursor {
-    background: $primary 25%;
-    color: $accent;
+    background: $primary;
+    color: $background;
 }
 
 /* ── Node detail modal ────────────────────────────────────────────────────── */
@@ -376,6 +376,22 @@ Button {
     text-style: bold;
 }
 
+Button:focus {
+    color: $background;
+    background: $primary;
+    border: none;
+}
+
+/* ── Inverted focus indicator ─────────────────────────────────────────────── */
+/* All focusable input-like widgets invert to $primary bg / $background text  */
+/* so focus is unambiguous in any theme including monochrome.                  */
+
+Input:focus {
+    color: $background;
+    background: $primary;
+    border: none;
+}
+
 .section-label {
     padding: 0;
     color: $secondary;
@@ -383,39 +399,7 @@ Button {
 }
 
 /* ── Status bar labels ────────────────────────────────────────────────────── */
-
-#conn-state {
-    width: auto;
-    padding: 0 1;
-    color: $primary;
-    text-style: bold;
-}
-
-#conn-state.connected {
-    color: $accent;
-}
-
-#conn-state.disconnected {
-    color: $error;
-}
-
-#channel-label {
-    width: auto;
-    padding: 0 1;
-    color: $secondary;
-}
-
-#node-count {
-    width: auto;
-    padding: 0 1;
-    color: $secondary;
-}
-
-#battery-label {
-    width: auto;
-    padding: 0 1;
-    color: $secondary;
-}
+/* conn-state, battery-label rules live in ConnectionStatusBar.DEFAULT_CSS    */
 
 ConnectionStatusBar #disconnect-btn {
     dock: right;

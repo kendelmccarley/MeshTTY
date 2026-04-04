@@ -28,7 +28,7 @@ THEME_AMBER = Theme(
     accent="#ffb347",
     success="#ffa040",
     warning="#cc5500",
-    error="#ff3300",
+    error="#ff5500",    # bright orange — same hue family, not red
     variables={"text-muted": "#7a3c00"},
 )
 
@@ -44,7 +44,7 @@ THEME_PHOSPHOR = Theme(
     accent="#33ff88",
     success="#00cc55",
     warning="#089940",
-    error="#005522",
+    error="#00ff66",    # brightest green — same hue, high contrast for errors
     variables={"text-muted": "#0a5530"},
 )
 
@@ -59,8 +59,8 @@ THEME_IBM = Theme(
     secondary="#888888",
     accent="#ffffff",
     success="#aaaaaa",
-    warning="#666666",
-    error="#444444",
+    warning="#999999",
+    error="#ffffff",    # full white — maximum contrast for errors, still grey-scale
     variables={"text-muted": "#555555"},
 )
 

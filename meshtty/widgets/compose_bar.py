@@ -23,9 +23,9 @@ class PrefixSelector(Input):
         border: none;
     }
     PrefixSelector:focus {
-        color: $primary;
+        color: $background;
+        background: $primary;
         border: none;
-        text-style: bold;
     }
     """
 
