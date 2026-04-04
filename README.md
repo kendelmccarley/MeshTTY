@@ -1,8 +1,8 @@
 # MeshTTY
 
-> **PRE-ALPHA — work in progress.**
-> Known bugs, incomplete features, and UI rough edges.
-> Published for development tracking only. Expect breaking changes between commits.
+> **PRE-RELEASE — v0.1.1 beta.**
+> Core functionality is working. Some features are incomplete and rough edges remain.
+> Feedback and bug reports welcome via [GitHub Issues](https://github.com/kendelmccarrey/MeshTTY/issues).
 
 MeshTTY is a terminal-based (TUI) client for [Meshtastic](https://meshtastic.org/) LoRa mesh radio networks. It runs on a Raspberry Pi or any Linux/macOS system with a terminal. Built with the [Textual](https://textual.textualize.io/) framework, it connects to a Meshtastic node over USB/serial, TCP/WiFi, or Bluetooth (BLE) and renders a classic 80×24 box-drawing UI that works in any terminal — no desktop environment, GPU, or X server required.
 
@@ -213,13 +213,16 @@ A unified, scrollable message history for all channels and direct messages, plus
 #### Message display
 
 ```
-HH:MM SenderName: message text
+HH:MM ChannelName/SenderName: message text   ← channel broadcast
+  HH:MM SenderName: message text             ← direct message (indented)
 ```
 
-- All messages show the **sender's short node name** as the prefix — both channel broadcasts and direct messages.
+- **Channel messages** show `ChannelName/SenderShortName` as the prefix (e.g. `Primary/HAK5`).
+- **Direct messages** show just the sender's short node name.
 - **Outgoing messages** are indented two spaces and displayed in accent colour.
 - Long lines wrap aligned under the message text.
 - The 200 most recent messages are loaded from the local database on startup.
+- Node short names are resolved from the local database so names appear correctly even after reconnect.
 
 #### Compose bar
 
@@ -275,7 +278,7 @@ Shows node ID, short/long name, hardware model, last SNR, last heard, battery le
 
 ### 6.5 Settings Tab
 
-Configure transport, display, and messaging defaults. Shows current connection status and a **Disconnect** button. Click **SAVE** to write changes to disk. The **Theme** setting takes effect immediately.
+Configure transport, display, and messaging defaults. Shows current connection status and a **Disconnect** button. Press **Tab / Shift+Tab** to move between fields. Use **Space**, **Enter**, **←/→** on option fields to cycle through choices. Press **Save** to write changes to disk. The **Theme** setting takes effect immediately.
 
 ---
 
@@ -306,16 +309,13 @@ Commands are case-insensitive. `/JOKE` requires `meshtty/data/shortjokes.csv` (n
 
 ### Main Screen — Global
 
-| Key       | Action                         |
-|-----------|--------------------------------|
-| F1        | Help overlay                   |
-| Ctrl+T    | Switch to MESSAGES tab         |
-| Ctrl+L    | Switch to CHANNELS tab         |
-| Ctrl+N    | Switch to NODES tab            |
-| Ctrl+S    | Switch to SETTINGS tab         |
-| Ctrl+R    | Refresh node table             |
-| Ctrl+D    | Disconnect → Connection Screen |
-| Ctrl+Q    | Quit                           |
+| Key       | Action                                             |
+|-----------|----------------------------------------------------|
+| F1        | Help overlay                                       |
+| Ctrl+T    | Cycle to next tab (Messages → Channels → Nodes → Settings → wrap) |
+| Ctrl+R    | Refresh node table                                 |
+| Ctrl+D    | Disconnect → Connection Screen                     |
+| Ctrl+Q    | Quit                                               |
 
 ### Messages Tab
 
