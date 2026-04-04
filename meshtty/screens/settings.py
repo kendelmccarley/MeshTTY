@@ -31,15 +31,14 @@ class SettingsView(Widget):
     SettingsView {
         height: 1fr;
         overflow-y: auto;
-        padding: 1 2;
+        padding: 0 2;
     }
     .section-header {
         color: $primary;
-        padding: 1 0 0 0;
         text-style: bold;
     }
     #conn-status-label {
-        margin-bottom: 0;
+        margin: 0;
     }
     .row {
         height: 1;
@@ -63,7 +62,7 @@ class SettingsView(Widget):
         border: none;
     }
     #save-btn {
-        margin-top: 1;
+        margin: 0;
         min-height: 1;
         width: 10;
     }
@@ -71,7 +70,7 @@ class SettingsView(Widget):
         color: $success;
     }
     #disconnect-btn {
-        margin-bottom: 1;
+        margin: 0;
         min-height: 1;
         width: 14;
     }

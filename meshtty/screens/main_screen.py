@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import TabbedContent, TabPane
+from textual.widgets import Rule, TabbedContent, TabPane
 
 from meshtty.messages.app_messages import (
     ConnectionEstablished,
@@ -42,6 +42,12 @@ class MainScreen(Screen):
         display: none;
         height: 0;
     }
+    #header-rule {
+        height: 1;
+        margin: 0;
+        color: $primary;
+        layer: content;
+    }
     """
 
     BINDINGS = [
@@ -56,6 +62,7 @@ class MainScreen(Screen):
         yield TerminalFrame(title="MeshTTY")
         # Content layer: status bar pinned to top, tabs fill the rest
         yield ConnectionStatusBar()
+        yield Rule(id="header-rule")
         with TabbedContent(id="main-tabs", initial="tab-messages"):
             with TabPane("MESSAGES", id="tab-messages"):
                 yield MessagesView(id="messages-view")
