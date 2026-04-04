@@ -23,6 +23,7 @@ from meshtty.messages.app_messages import (
     ConnectionEstablished,
     ConnectionLost,
     NodeUpdated,
+    SettingsChanged,
     TextMessageReceived,
 )
 from meshtty.screens.connection import ConnectionScreen
@@ -100,7 +101,7 @@ class MeshTTYApp(App):
             self.register_theme(t)
         valid = {t.name for t in ALL_THEMES}
         if self.config.theme not in valid:
-            self.config.theme = "crt-amber"
+            self.config.theme = "vt340"
         self.theme = self.config.theme
 
         if self.config.auto_connect and self._has_saved_transport():
@@ -154,6 +155,13 @@ class MeshTTYApp(App):
             pass
 
     def on_node_updated(self, event: NodeUpdated) -> None:
+        try:
+            if self.screen:
+                self.screen.post_message(event)
+        except Exception:
+            pass
+
+    def on_settings_changed(self, event: SettingsChanged) -> None:
         try:
             if self.screen:
                 self.screen.post_message(event)

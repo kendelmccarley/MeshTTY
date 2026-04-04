@@ -75,3 +75,8 @@ class TransportChanged(Message, bubble=False):
     def __init__(self, transport_type: str) -> None:
         self.transport_type = transport_type
         super().__init__()
+
+
+class SettingsChanged(Message, bubble=False):
+    """User saved settings — recipients should re-read app.config and refresh."""
+    pass

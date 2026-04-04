@@ -11,6 +11,7 @@ from meshtty.messages.app_messages import (
     ConnectionEstablished,
     ConnectionLost,
     NodeUpdated,
+    SettingsChanged,
     TextMessageReceived,
 )
 from meshtty.screens.channels import ChannelView
@@ -131,6 +132,16 @@ class MainScreen(Screen):
             pass
         try:
             self.query_one("#nodes-view", NodeListView).post_message(event)
+        except Exception:
+            pass
+
+    def on_settings_changed(self, event: SettingsChanged) -> None:
+        try:
+            self.query_one("#nodes-view", NodeListView).post_message(event)
+        except Exception:
+            pass
+        try:
+            self.query_one("#messages-view", MessagesView).post_message(event)
         except Exception:
             pass
 

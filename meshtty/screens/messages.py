@@ -9,7 +9,7 @@ from textual.app import ComposeResult
 from textual.events import Key
 from textual.widget import Widget
 
-from meshtty.messages.app_messages import TextMessageReceived
+from meshtty.messages.app_messages import SettingsChanged, TextMessageReceived
 from meshtty.widgets.compose_bar import ComposeBar
 from meshtty.widgets.message_view import MessageView
 
@@ -58,6 +58,12 @@ class MessagesView(Widget):
 
     def on_node_updated(self, event) -> None:
         """Keep _short_to_node_id current as nodes check in over time."""
+        try:
+            self._refresh_conversations()
+        except Exception:
+            pass
+
+    def on_settings_changed(self, event: SettingsChanged) -> None:
         try:
             self._refresh_conversations()
         except Exception:
@@ -185,10 +191,24 @@ class MessagesView(Widget):
         new_list = self._build_conversations()
         self._conversations = new_list
         current = self._last_prefix
+
         if current in new_list:
             self._conv_index = new_list.index(current)
         else:
-            self._conv_index = 0
+            # No prior prefix — pick the default channel if configured
+            default_idx = self.app.config.default_channel
+            transport = self.app.transport
+            default_name = ""
+            if transport:
+                for idx, name in transport.get_channels():
+                    if idx == default_idx:
+                        default_name = name
+                        break
+            if default_name and default_name in new_list:
+                self._conv_index = new_list.index(default_name)
+            else:
+                self._conv_index = 0
+
         if new_list:
             prefix = new_list[self._conv_index]
             self._last_prefix = prefix

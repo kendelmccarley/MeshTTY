@@ -1,9 +1,24 @@
 from textual.theme import Theme
 
-# ── cool-retro-term: Default Amber ────────────────────────────────────────────
-# fontColor: #ff8100  backgroundColor: #000000
+# ── VT340 — DEC VT340 multicolor (default) ────────────────────────────────────
+THEME_VT340 = Theme(
+    name="vt340",
+    dark=True,
+    background="#000000",
+    surface="#0a0a12",
+    panel="#14141e",
+    primary="#00aaff",
+    secondary="#0077cc",
+    accent="#66ccff",
+    success="#00cc66",
+    warning="#ffaa00",
+    error="#ff3333",
+    variables={"text-muted": "#445566"},
+)
+
+# ── VT220-Amber — true amber monochrome on black ───────────────────────────────
 THEME_AMBER = Theme(
-    name="crt-amber",
+    name="vt220-amber",
     dark=True,
     background="#000000",
     surface="#080400",
@@ -12,15 +27,14 @@ THEME_AMBER = Theme(
     secondary="#cc6600",
     accent="#ffb347",
     success="#ffa040",
-    warning="#ff6000",
-    error="#ff2200",
+    warning="#cc5500",
+    error="#ff3300",
     variables={"text-muted": "#7a3c00"},
 )
 
-# ── cool-retro-term: Monochrome Green ─────────────────────────────────────────
-# fontColor: #0ccc68  backgroundColor: #000000
+# ── VT220-Green — true green monochrome on black ──────────────────────────────
 THEME_PHOSPHOR = Theme(
-    name="crt-phosphor",
+    name="vt220-green",
     dark=True,
     background="#000000",
     surface="#000a02",
@@ -28,16 +42,15 @@ THEME_PHOSPHOR = Theme(
     primary="#0ccc68",
     secondary="#08994e",
     accent="#33ff88",
-    success="#00ff80",
-    warning="#99ff33",
-    error="#ff3300",
+    success="#00cc55",
+    warning="#089940",
+    error="#005522",
     variables={"text-muted": "#0a5530"},
 )
 
-# ── cool-retro-term: IBM VGA 8×16 ─────────────────────────────────────────────
-# fontColor: #c0c0c0  backgroundColor: #000000
+# ── VT220-White — true grey/white monochrome on black ─────────────────────────
 THEME_IBM = Theme(
-    name="crt-ibm",
+    name="vt220-white",
     dark=True,
     background="#000000",
     surface="#0a0a0a",
@@ -46,9 +59,9 @@ THEME_IBM = Theme(
     secondary="#888888",
     accent="#ffffff",
     success="#aaaaaa",
-    warning="#888888",
-    error="#ff5555",
+    warning="#666666",
+    error="#444444",
     variables={"text-muted": "#555555"},
 )
 
-ALL_THEMES = [THEME_AMBER, THEME_PHOSPHOR, THEME_IBM]
+ALL_THEMES = [THEME_VT340, THEME_AMBER, THEME_PHOSPHOR, THEME_IBM]

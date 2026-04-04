@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from textual.events import Key
+from textual.message import Message
 from textual.widget import Widget
 
 
@@ -13,6 +14,13 @@ class CycleSelect(Widget):
     """
 
     can_focus = True
+
+    class Changed(Message):
+        """Posted whenever the selected value changes."""
+        def __init__(self, widget: "CycleSelect", value: str) -> None:
+            self.cycle_select = widget
+            self.value = value
+            super().__init__()
 
     DEFAULT_CSS = """
     CycleSelect {
@@ -50,6 +58,7 @@ class CycleSelect(Widget):
     def _cycle(self, delta: int) -> None:
         self._idx = (self._idx + delta) % len(self._options)
         self.refresh()
+        self.post_message(self.Changed(self, self.value))
 
     def on_key(self, event: Key) -> None:
         if event.key == "left":

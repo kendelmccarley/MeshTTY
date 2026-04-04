@@ -7,6 +7,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Input, Label
 
 from meshtty.config.settings import save_config
+from meshtty.messages.app_messages import SettingsChanged
 from meshtty.themes import ALL_THEMES
 from meshtty.widgets.cycle_select import CycleSelect
 
@@ -20,9 +21,10 @@ _TRANSPORT_OPTIONS = [
 _TOGGLE_OPTIONS = [("Yes", "yes"), ("No", "no")]
 
 _THEME_OPTIONS = [
-    ("Amber",          "crt-amber"),
-    ("Green Phosphor", "crt-phosphor"),
-    ("IBM / Grey",     "crt-ibm"),
+    ("VT340",       "vt340"),
+    ("VT220-Amber", "vt220-amber"),
+    ("VT220-Green", "vt220-green"),
+    ("VT220-White", "vt220-white"),
 ]
 
 
@@ -178,6 +180,13 @@ class SettingsView(Widget):
         except Exception:
             pass
 
+    def on_cycle_select_changed(self, event: CycleSelect.Changed) -> None:
+        if event.cycle_select.id == "sel-theme":
+            try:
+                self.app.theme = event.value
+            except Exception:
+                pass
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "disconnect-btn":
             event.stop()
@@ -199,7 +208,7 @@ class SettingsView(Widget):
         cfg.last_ble_address = self.query_one("#inp-ble", Input).value.strip()
         cfg.auto_connect = self.query_one("#sw-autoconnect", CycleSelect).value == "yes"
         cfg.node_short_name_display = self.query_one("#sw-shortnames", CycleSelect).value == "yes"
-        cfg.theme = self.query_one("#sel-theme", CycleSelect).value or "crt-amber"
+        cfg.theme = self.query_one("#sel-theme", CycleSelect).value or "vt340"
         try:
             cfg.default_channel = int(self.query_one("#inp-channel", Input).value)
         except ValueError:
@@ -207,4 +216,6 @@ class SettingsView(Widget):
 
         save_config(cfg)
         self.app.theme = cfg.theme
+        self.app.refresh()
+        self.app.post_message(SettingsChanged())
         self.query_one("#save-status", Label).update("Settings saved.")

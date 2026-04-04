@@ -64,8 +64,13 @@ class NodeTable(Widget):
     def upsert_node(self, node_id: str, info: dict) -> None:
         table = self.query_one("#node-datatable", DataTable)
         use_short = self.app.config.node_short_name_display
+        name_col = (
+            info.get("short_name") or node_id
+            if use_short
+            else info.get("long_name") or info.get("short_name") or node_id
+        )
         row_values = (
-            info.get("short_name") or node_id,
+            name_col,
             info.get("long_name") or "",
             _fmt_snr(info.get("last_snr")),
             _fmt_last_heard(info.get("last_heard")),

@@ -6,7 +6,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.widget import Widget
 
-from meshtty.messages.app_messages import NodeUpdated
+from meshtty.messages.app_messages import NodeUpdated, SettingsChanged
 from meshtty.widgets.node_table import NodeTable
 
 
@@ -33,6 +33,9 @@ class NodeListView(Widget):
             self._save_node(event.node_id, event.node_info)
         except Exception:
             pass
+
+    def on_settings_changed(self, event: SettingsChanged) -> None:
+        self._load_nodes()
 
     # ------------------------------------------------------------------
     # Workers

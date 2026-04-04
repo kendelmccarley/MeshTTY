@@ -135,7 +135,7 @@ bash update.sh
 ./launch-pi.sh --bot --log    # pass flags through
 ```
 
-`launch-pi.sh` detects whether it is running on the Linux framebuffer console (`$TERM=linux`, not SSH, not X). On the physical screen it loads `Terminus32x16` to scale the 80×24 grid to fill a 1366×768 display. It then sets `TERM=xterm-256color` before launching MeshTTY.
+`launch-pi.sh` detects whether it is running on the Linux framebuffer console (`$TERM=linux`, not SSH, not X). On the physical screen it reads the framebuffer resolution and loads the largest Terminus font that still fits at least 80 columns, so the UI fills whatever display is connected at a comfortable size. It then sets `TERM=xterm-256color` before launching MeshTTY.
 
 ### macOS / Ubuntu
 
