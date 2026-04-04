@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Switch
+from textual.widgets import Button, Input, Label
 
 from meshtty.config.settings import save_config
 from meshtty.themes import ALL_THEMES
@@ -54,13 +54,9 @@ class SettingsView(Widget):
         border: none;
         padding: 0;
     }
-    .row Switch {
-        height: 1;
-        border: none;
-    }
     #save-btn {
         margin: 0;
-        min-height: 1;
+        height: 1;
         width: 10;
     }
     #save-status {
@@ -68,7 +64,7 @@ class SettingsView(Widget):
     }
     #disconnect-btn {
         margin: 0;
-        min-height: 1;
+        height: 1;
         width: 14;
     }
     """
@@ -101,13 +97,17 @@ class SettingsView(Widget):
 
         with Horizontal(classes="row"):
             yield Label("Auto-connect on launch")
-            yield Switch(value=cfg.auto_connect, id="sw-autoconnect")
+            yield CycleSelect([("Yes", "yes"), ("No", "no")],
+                              value="yes" if cfg.auto_connect else "no",
+                              id="sw-autoconnect")
 
         yield Label("Display", classes="section-header")
 
         with Horizontal(classes="row"):
             yield Label("Show short node names")
-            yield Switch(value=cfg.node_short_name_display, id="sw-shortnames")
+            yield CycleSelect([("Yes", "yes"), ("No", "no")],
+                              value="yes" if cfg.node_short_name_display else "no",
+                              id="sw-shortnames")
 
         with Horizontal(classes="row"):
             yield Label("Theme")
@@ -183,8 +183,8 @@ class SettingsView(Widget):
         except ValueError:
             cfg.last_tcp_port = 4403
         cfg.last_ble_address = self.query_one("#inp-ble", Input).value.strip()
-        cfg.auto_connect = self.query_one("#sw-autoconnect", Switch).value
-        cfg.node_short_name_display = self.query_one("#sw-shortnames", Switch).value
+        cfg.auto_connect = self.query_one("#sw-autoconnect", CycleSelect).value == "yes"
+        cfg.node_short_name_display = self.query_one("#sw-shortnames", CycleSelect).value == "yes"
         cfg.theme = self.query_one("#sel-theme", CycleSelect).value or "crt-amber"
         try:
             cfg.default_channel = int(self.query_one("#inp-channel", Input).value)
