@@ -14,7 +14,6 @@ is shutting down.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -31,26 +30,6 @@ if TYPE_CHECKING:
     from textual.app import App
 
 log = logging.getLogger(__name__)
-_diag = logging.getLogger("meshtty.diag")  # always-on diagnostic logger
-
-
-def _scan_for(obj, needle: str, path: str = "") -> list[str]:
-    """Recursively walk obj and return every path where needle appears."""
-    hits = []
-    needle_low = needle.lower()
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            hits.extend(_scan_for(v, needle, f"{path}.{k}" if path else str(k)))
-    elif isinstance(obj, (list, tuple)):
-        for i, v in enumerate(obj):
-            hits.extend(_scan_for(v, needle, f"{path}[{i}]"))
-    else:
-        try:
-            if needle_low in str(obj).lower():
-                hits.append(f"{path} = {obj!r}")
-        except Exception:
-            pass
-    return hits
 
 
 def _extract_node_info(node: dict) -> dict:
@@ -122,26 +101,6 @@ class EventBridge:
 
     def _on_text(self, packet: dict, interface) -> None:  # noqa: ANN001
         try:
-            # --- Diagnostic: dump full packet + node entry for every DM ---
-            try:
-                from_id = packet.get("fromId") or f"!{packet.get('from', 0):08x}"
-                _diag.warning("=== INCOMING TEXT PACKET ===")
-                _diag.warning("packet: %s", json.dumps(packet, default=str))
-                # Scan entire packet for "T22M"
-                hits = _scan_for(packet, "T22M")
-                _diag.warning("T22M in packet: %s", hits if hits else "NOT FOUND")
-                # Dump the nodes dict entry for this sender
-                nodes = getattr(interface, "nodes", {}) or {}
-                _diag.warning("nodes keys sample: %s", list(nodes.keys())[:10])
-                # Try every possible key form
-                node_direct = nodes.get(from_id)
-                _diag.warning("nodes[%r] direct: %s", from_id, json.dumps(node_direct, default=str) if node_direct else "NOT FOUND")
-                # Also scan all nodes for T22M
-                node_hits = _scan_for(nodes, "T22M")
-                _diag.warning("T22M in nodes: %s", node_hits if node_hits else "NOT FOUND")
-            except Exception as diag_exc:
-                _diag.warning("diagnostic dump failed: %s", diag_exc)
-            # --- End diagnostic ---
             self._app.post_message(TextMessageReceived(packet))
         except Exception as exc:
             log.error("_on_text bridge error: %s", exc)
