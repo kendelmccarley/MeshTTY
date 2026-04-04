@@ -23,20 +23,32 @@ from meshtty.widgets.terminal_frame import TerminalFrame
 
 LAYERS = ("frame", "content")
 
+_TAB_ORDER = ["tab-messages", "tab-channels", "tab-nodes", "tab-settings"]
+_TAB_NAMES = {
+    "tab-messages": "MESSAGES",
+    "tab-channels": "CHANNELS",
+    "tab-nodes": "NODES",
+    "tab-settings": "SETTINGS",
+}
+
 
 class MainScreen(Screen):
     """Primary application screen."""
 
     LAYERS = LAYERS
 
+    DEFAULT_CSS = """
+    #main-tabs > Tabs {
+        display: none;
+        height: 0;
+    }
+    """
+
     BINDINGS = [
         Binding("ctrl+q", "app.quit", "Quit"),
         Binding("ctrl+d", "app.disconnect", "Disconnect"),
         Binding("ctrl+r", "refresh_nodes", "Refresh"),
-        Binding("ctrl+t", "switch_tab('tab-messages')", "Messages", priority=True),
-        Binding("ctrl+l", "switch_tab('tab-channels')", "Channels", priority=True),
-        Binding("ctrl+n", "switch_tab('tab-nodes')", "Nodes", priority=True),
-        Binding("ctrl+s", "switch_tab('tab-settings')", "Settings", priority=True),
+        Binding("ctrl+t", "next_tab", "Next Tab", priority=True),
     ]
 
     def compose(self) -> ComposeResult:
@@ -55,7 +67,10 @@ class MainScreen(Screen):
                 yield SettingsView(id="settings-view")
 
     def on_mount(self) -> None:
-        pass
+        try:
+            self.query_one(ConnectionStatusBar).page_name = "MESSAGES"
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # App message handlers (routed from MeshTTYApp)
@@ -93,14 +108,16 @@ class MainScreen(Screen):
         except Exception:
             pass
 
-    def on_node_updated(self, event: NodeUpdated) -> None:
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         try:
-            bar = self.query_one(ConnectionStatusBar)
-            transport = getattr(self.app, "transport", None)
-            if transport:
-                bar.node_count = len(transport.get_nodes())
+            pane_id = event.pane.id if event.pane else None
+            name = _TAB_NAMES.get(pane_id, "")
+            if name:
+                self.query_one(ConnectionStatusBar).page_name = name
         except Exception:
             pass
+
+    def on_node_updated(self, event: NodeUpdated) -> None:
         try:
             self.query_one("#settings-view", SettingsView).post_message(event)
         except Exception:
@@ -146,17 +163,22 @@ class MainScreen(Screen):
     # Actions
     # ------------------------------------------------------------------
 
-    def action_switch_tab(self, tab_id: str) -> None:
+    def action_next_tab(self) -> None:
         tc = self.query_one("#main-tabs", TabbedContent)
-        tc.active = tab_id
         try:
-            if tab_id == "tab-messages":
+            idx = _TAB_ORDER.index(tc.active)
+        except ValueError:
+            idx = -1
+        next_id = _TAB_ORDER[(idx + 1) % len(_TAB_ORDER)]
+        tc.active = next_id
+        try:
+            if next_id == "tab-messages":
                 self.query_one("#compose-input").focus()
-            elif tab_id == "tab-channels":
+            elif next_id == "tab-channels":
                 self.query_one("#channel-list").focus()
-            elif tab_id == "tab-nodes":
+            elif next_id == "tab-nodes":
                 self.query_one("DataTable").focus()
-            elif tab_id == "tab-settings":
+            elif next_id == "tab-settings":
                 self.query_one("#settings-view").focus()
         except Exception:
             pass

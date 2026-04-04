@@ -10,7 +10,7 @@ from textual.widgets import Label
 
 
 class ConnectionStatusBar(Widget):
-    """Shows connection state, channel, node count, and battery in one row."""
+    """Shows current page name, connection state, and key hints in one row."""
 
     DEFAULT_CSS = """
     ConnectionStatusBar {
@@ -25,6 +25,12 @@ class ConnectionStatusBar(Widget):
         align: left middle;
         background: transparent;
     }
+    #page-name {
+        width: auto;
+        padding: 0 1;
+        color: $accent;
+        text-style: bold;
+    }
     #conn-state {
         width: auto;
         padding: 0 1;
@@ -32,20 +38,10 @@ class ConnectionStatusBar(Widget):
         text-style: bold;
     }
     #conn-state.connected {
-        color: $accent;
+        color: $primary;
     }
     #conn-state.disconnected {
         color: $error;
-    }
-    #channel-label {
-        width: auto;
-        padding: 0 1;
-        color: $secondary;
-    }
-    #node-count {
-        width: auto;
-        padding: 0 1;
-        color: $secondary;
     }
     #battery-label {
         width: auto;
@@ -61,27 +57,28 @@ class ConnectionStatusBar(Widget):
     """
 
     connection_state: reactive[str] = reactive("disconnected")
-    channel_name: reactive[str] = reactive("—")
-    node_count: reactive[int] = reactive(0)
     battery_level: reactive[int | None] = reactive(None)
+    page_name: reactive[str] = reactive("MESSAGES")
 
     def compose(self) -> ComposeResult:
         with Horizontal():
+            yield Label("MESSAGES", id="page-name")
             yield Label("▮ OFFLINE", id="conn-state")
-            yield Label("CH: —", id="channel-label")
-            yield Label("NODES: 0", id="node-count")
             yield Label("", id="battery-label")
-            yield Label("^Q Quit  ^D Disc  ^T/L/N/S Tabs", id="key-hints")
+            yield Label("^Q Quit  ^D Disc  ^T Next", id="key-hints")
 
     # ------------------------------------------------------------------
     # Watchers
     # ------------------------------------------------------------------
 
+    def watch_page_name(self, name: str) -> None:
+        self.query_one("#page-name", Label).update(name)
+
     def watch_connection_state(self, state: str) -> None:
         label = self.query_one("#conn-state", Label)
         if state == "connected":
             transport = getattr(self.app, "transport", None)
-            transport_str = f" {transport}" if transport else ""
+            transport_str = f" {transport.transport_type.upper()}" if transport else ""
             label.update(f"▶ ONLINE{transport_str}")
             label.add_class("connected")
             label.remove_class("disconnected")
@@ -89,12 +86,6 @@ class ConnectionStatusBar(Widget):
             label.update("▮ OFFLINE")
             label.remove_class("connected")
             label.add_class("disconnected")
-
-    def watch_channel_name(self, name: str) -> None:
-        self.query_one("#channel-label", Label).update(f"CH: {name}")
-
-    def watch_node_count(self, count: int) -> None:
-        self.query_one("#node-count", Label).update(f"NODES: {count}")
 
     def watch_battery_level(self, level: int | None) -> None:
         label = self.query_one("#battery-label", Label)
