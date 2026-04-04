@@ -5,10 +5,11 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Switch
+from textual.widgets import Button, Input, Label, Switch
 
 from meshtty.config.settings import save_config
 from meshtty.themes import ALL_THEMES
+from meshtty.widgets.cycle_select import CycleSelect
 
 
 _TRANSPORT_OPTIONS = [
@@ -53,10 +54,6 @@ class SettingsView(Widget):
         border: none;
         padding: 0;
     }
-    .row Select {
-        width: 1fr;
-        height: 1;
-    }
     .row Switch {
         height: 1;
         border: none;
@@ -84,11 +81,7 @@ class SettingsView(Widget):
 
         with Horizontal(classes="row"):
             yield Label("Default transport")
-            yield Select(
-                [(label, val) for label, val in _TRANSPORT_OPTIONS],
-                value=cfg.default_transport,
-                id="sel-transport",
-            )
+            yield CycleSelect(_TRANSPORT_OPTIONS, value=cfg.default_transport, id="sel-transport")
 
         with Horizontal(classes="row"):
             yield Label("Serial port")
@@ -118,11 +111,7 @@ class SettingsView(Widget):
 
         with Horizontal(classes="row"):
             yield Label("Theme")
-            yield Select(
-                [(label, val) for label, val in _THEME_OPTIONS],
-                value=cfg.theme,
-                id="sel-theme",
-            )
+            yield CycleSelect(_THEME_OPTIONS, value=cfg.theme, id="sel-theme")
 
         yield Label("Messaging", classes="section-header")
 
@@ -186,7 +175,7 @@ class SettingsView(Widget):
     def _save(self) -> None:
         cfg = self.app.config
 
-        cfg.default_transport = self.query_one("#sel-transport", Select).value or "serial"
+        cfg.default_transport = self.query_one("#sel-transport", CycleSelect).value or "serial"
         cfg.last_serial_port = self.query_one("#inp-serial", Input).value.strip()
         cfg.last_tcp_host = self.query_one("#inp-tcp-host", Input).value.strip()
         try:
@@ -196,7 +185,7 @@ class SettingsView(Widget):
         cfg.last_ble_address = self.query_one("#inp-ble", Input).value.strip()
         cfg.auto_connect = self.query_one("#sw-autoconnect", Switch).value
         cfg.node_short_name_display = self.query_one("#sw-shortnames", Switch).value
-        cfg.theme = self.query_one("#sel-theme", Select).value or "meshtty-multicolor"
+        cfg.theme = self.query_one("#sel-theme", CycleSelect).value or "crt-amber"
         try:
             cfg.default_channel = int(self.query_one("#inp-channel", Input).value)
         except ValueError:
