@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Static, Switch
+from textual.widgets import Button, Input, Label, Select, Switch
 
 from meshtty.config.settings import save_config
 from meshtty.themes import ALL_THEMES
@@ -38,9 +38,11 @@ class SettingsView(Widget):
         padding: 1 0 0 0;
         text-style: bold;
     }
+    #conn-status-label {
+        margin-bottom: 0;
+    }
     .row {
-        height: 4;
-        layout: horizontal;
+        height: 1;
         align: left middle;
     }
     .row Label {
@@ -48,23 +50,30 @@ class SettingsView(Widget):
     }
     .row Input {
         width: 1fr;
+        height: 1;
+        border: none;
+        padding: 0;
     }
     .row Select {
         width: 1fr;
+        height: 1;
+    }
+    .row Switch {
+        height: 1;
+        border: none;
     }
     #save-btn {
-        margin-top: 2;
-        min-height: 3;
-        width: 20;
+        margin-top: 1;
+        min-height: 1;
+        width: 10;
     }
     #save-status {
-        padding: 1 0;
         color: $success;
     }
     #disconnect-btn {
-        margin-top: 1;
-        min-height: 3;
-        width: 20;
+        margin-bottom: 1;
+        min-height: 1;
+        width: 14;
     }
     """
 
@@ -74,7 +83,7 @@ class SettingsView(Widget):
         yield Label("Disconnected", id="conn-status-label")
         yield Button("Disconnect", id="disconnect-btn", variant="error", disabled=True)
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Default transport")
             yield Select(
                 [(label, val) for label, val in _TRANSPORT_OPTIONS],
@@ -82,33 +91,33 @@ class SettingsView(Widget):
                 id="sel-transport",
             )
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Serial port")
             yield Input(value=cfg.last_serial_port, placeholder="/dev/ttyUSB0", id="inp-serial")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("TCP hostname")
             yield Input(value=cfg.last_tcp_host, placeholder="192.168.1.100", id="inp-tcp-host")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("TCP port")
             yield Input(value=str(cfg.last_tcp_port), placeholder="4403", id="inp-tcp-port")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("BLE address")
             yield Input(value=cfg.last_ble_address, placeholder="AA:BB:CC:DD:EE:FF", id="inp-ble")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Auto-connect on launch")
             yield Switch(value=cfg.auto_connect, id="sw-autoconnect")
 
         yield Label("Display", classes="section-header")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Show short node names")
             yield Switch(value=cfg.node_short_name_display, id="sw-shortnames")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Theme")
             yield Select(
                 [(label, val) for label, val in _THEME_OPTIONS],
@@ -118,7 +127,7 @@ class SettingsView(Widget):
 
         yield Label("Messaging", classes="section-header")
 
-        with Vertical(classes="row"):
+        with Horizontal(classes="row"):
             yield Label("Default channel")
             yield Input(value=str(cfg.default_channel), placeholder="0", id="inp-channel")
 
