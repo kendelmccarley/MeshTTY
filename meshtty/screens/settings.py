@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label
 
@@ -17,6 +16,8 @@ _TRANSPORT_OPTIONS = [
     ("TCP / WiFi", "tcp"),
     ("Bluetooth (BLE)", "ble"),
 ]
+
+_TOGGLE_OPTIONS = [("Yes", "yes"), ("No", "no")]
 
 _THEME_OPTIONS = [
     ("Amber",          "crt-amber"),
@@ -33,94 +34,103 @@ class SettingsView(Widget):
         height: 1fr;
         overflow-y: auto;
         padding: 0 2;
+        layout: grid;
+        grid-size: 2;
+        grid-rows: 1;
+        grid-columns: 28 1fr;
+        grid-gutter: 0;
     }
-    .section-header {
-        color: $primary;
-        text-style: bold;
-    }
-    #conn-status-label {
+    .full-width {
+        column-span: 2;
+        height: 1;
         margin: 0;
-    }
-    .row {
-        height: 1;
-        align: left middle;
-    }
-    .row Label {
-        width: 28;
-    }
-    .row Input {
-        width: 1fr;
-        height: 1;
-        border: none;
         padding: 0;
     }
-    #save-btn {
+    .section-header {
+        column-span: 2;
+        height: 1;
+        color: $primary;
+        text-style: bold;
         margin: 0;
+        padding: 0;
+    }
+    .setting-label {
+        height: 1;
+        margin: 0;
+        padding: 0;
+    }
+    .setting-value {
+        height: 1;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    #save-btn {
         height: 1;
         width: 10;
+        margin: 0;
     }
     #save-status {
         color: $success;
     }
     #disconnect-btn {
-        margin: 0;
         height: 1;
         width: 14;
+        margin: 0;
     }
     """
 
     def compose(self) -> ComposeResult:
         cfg = self.app.config
 
-        yield Label("Disconnected", id="conn-status-label")
-        yield Button("Disconnect", id="disconnect-btn", variant="error", disabled=True)
+        yield Label("Disconnected", id="conn-status-label", classes="full-width")
+        yield Button("Disconnect", id="disconnect-btn", variant="error",
+                     disabled=True, classes="full-width")
 
-        with Horizontal(classes="row"):
-            yield Label("Default transport")
-            yield CycleSelect(_TRANSPORT_OPTIONS, value=cfg.default_transport, id="sel-transport")
+        yield Label("Default transport", classes="setting-label")
+        yield CycleSelect(_TRANSPORT_OPTIONS, value=cfg.default_transport,
+                          id="sel-transport", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("Serial port")
-            yield Input(value=cfg.last_serial_port, placeholder="/dev/ttyUSB0", id="inp-serial")
+        yield Label("Serial port", classes="setting-label")
+        yield Input(value=cfg.last_serial_port, placeholder="/dev/ttyUSB0",
+                    id="inp-serial", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("TCP hostname")
-            yield Input(value=cfg.last_tcp_host, placeholder="192.168.1.100", id="inp-tcp-host")
+        yield Label("TCP hostname", classes="setting-label")
+        yield Input(value=cfg.last_tcp_host, placeholder="192.168.1.100",
+                    id="inp-tcp-host", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("TCP port")
-            yield Input(value=str(cfg.last_tcp_port), placeholder="4403", id="inp-tcp-port")
+        yield Label("TCP port", classes="setting-label")
+        yield Input(value=str(cfg.last_tcp_port), placeholder="4403",
+                    id="inp-tcp-port", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("BLE address")
-            yield Input(value=cfg.last_ble_address, placeholder="AA:BB:CC:DD:EE:FF", id="inp-ble")
+        yield Label("BLE address", classes="setting-label")
+        yield Input(value=cfg.last_ble_address, placeholder="AA:BB:CC:DD:EE:FF",
+                    id="inp-ble", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("Auto-connect on launch")
-            yield CycleSelect([("Yes", "yes"), ("No", "no")],
-                              value="yes" if cfg.auto_connect else "no",
-                              id="sw-autoconnect")
+        yield Label("Auto-connect on launch", classes="setting-label")
+        yield CycleSelect(_TOGGLE_OPTIONS,
+                          value="yes" if cfg.auto_connect else "no",
+                          id="sw-autoconnect", classes="setting-value")
 
         yield Label("Display", classes="section-header")
 
-        with Horizontal(classes="row"):
-            yield Label("Show short node names")
-            yield CycleSelect([("Yes", "yes"), ("No", "no")],
-                              value="yes" if cfg.node_short_name_display else "no",
-                              id="sw-shortnames")
+        yield Label("Show short node names", classes="setting-label")
+        yield CycleSelect(_TOGGLE_OPTIONS,
+                          value="yes" if cfg.node_short_name_display else "no",
+                          id="sw-shortnames", classes="setting-value")
 
-        with Horizontal(classes="row"):
-            yield Label("Theme")
-            yield CycleSelect(_THEME_OPTIONS, value=cfg.theme, id="sel-theme")
+        yield Label("Theme", classes="setting-label")
+        yield CycleSelect(_THEME_OPTIONS, value=cfg.theme,
+                          id="sel-theme", classes="setting-value")
 
         yield Label("Messaging", classes="section-header")
 
-        with Horizontal(classes="row"):
-            yield Label("Default channel")
-            yield Input(value=str(cfg.default_channel), placeholder="0", id="inp-channel")
+        yield Label("Default channel", classes="setting-label")
+        yield Input(value=str(cfg.default_channel), placeholder="0",
+                    id="inp-channel", classes="setting-value")
 
-        yield Button("Save", id="save-btn", variant="primary")
-        yield Label("", id="save-status")
+        yield Button("Save", id="save-btn", variant="primary", classes="full-width")
+        yield Label("", id="save-status", classes="full-width")
 
     def on_mount(self) -> None:
         self._refresh_connection_status()
