@@ -173,6 +173,13 @@ class MeshTTYApp(App):
 
         On the Pi framebuffer, widgets mounted before the theme change may not
         visually update without an explicit refresh — this ensures they do.
+
+        NOTE: If some widgets still don't update their colors on the Pi
+        framebuffer after a theme change, try changing layout=True to
+        recompose=True here.  recompose=True is more aggressive (it re-runs
+        compose() on each screen, rebuilding all child widgets from scratch)
+        but will reset transient state like message history scroll position
+        and focused widget.  layout=True is used here as the safer default.
         """
         try:
             for screen in self.screen_stack:
