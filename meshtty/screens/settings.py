@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+
+from textual import work
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label
@@ -182,10 +185,18 @@ class SettingsView(Widget):
 
     def on_cycle_select_changed(self, event: CycleSelect.Changed) -> None:
         if event.cycle_select.id == "sel-theme":
-            try:
-                self.app.theme = event.value
-            except Exception:
-                pass
+            # Debounced: cancels any pending apply and restarts the 120ms window.
+            # Prevents theme-jumping on Pi where CSS re-parse takes 200-800ms.
+            self._apply_theme_debounced(event.value)
+
+    @work(exclusive=True, group="theme-switch")
+    async def _apply_theme_debounced(self, theme_name: str) -> None:
+        """Apply theme after a short idle window — exclusive cancels previous invocation."""
+        await asyncio.sleep(0.12)
+        try:
+            self.app.theme = theme_name
+        except Exception:
+            pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "disconnect-btn":
@@ -216,6 +227,5 @@ class SettingsView(Widget):
 
         save_config(cfg)
         self.app.theme = cfg.theme
-        self.app.refresh()
         self.app.post_message(SettingsChanged())
         self.query_one("#save-status", Label).update("Settings saved.")

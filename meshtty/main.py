@@ -168,6 +168,19 @@ class MeshTTYApp(App):
         except Exception:
             pass
 
+    def watch_theme(self, theme: str) -> None:
+        """Force all mounted screens to re-render when the theme changes.
+
+        On the Pi framebuffer, widgets mounted before the theme change may not
+        visually update without an explicit refresh — this ensures they do.
+        """
+        try:
+            for screen in self.screen_stack:
+                if screen.is_mounted:
+                    screen.refresh(layout=True)
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
