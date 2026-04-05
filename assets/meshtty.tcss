@@ -374,6 +374,7 @@ Button {
     min-height: 1;
     margin: 0;
     text-style: bold;
+    color: $primary;
 }
 
 Button:focus {
