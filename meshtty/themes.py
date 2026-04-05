@@ -29,7 +29,7 @@ THEME_AMBER = Theme(
     success="#ffa040",
     warning="#cc5500",
     error="#ff5500",    # bright orange — same hue family, not red
-    variables={"text-muted": "#7a3c00"},
+    variables={"text-muted": "#7a3c00", "text-disabled": "#995500"},
 )
 
 # ── VT220-Green — true green monochrome on black ──────────────────────────────
@@ -45,7 +45,7 @@ THEME_PHOSPHOR = Theme(
     success="#00cc55",
     warning="#089940",
     error="#00ff66",    # brightest green — same hue, high contrast for errors
-    variables={"text-muted": "#0a5530"},
+    variables={"text-muted": "#0a5530", "text-disabled": "#0a7a40"},
 )
 
 # ── VT220-White — true grey/white monochrome on black ─────────────────────────
@@ -61,7 +61,7 @@ THEME_IBM = Theme(
     success="#aaaaaa",
     warning="#999999",
     error="#ffffff",    # full white — maximum contrast for errors, still grey-scale
-    variables={"text-muted": "#555555"},
+    variables={"text-muted": "#555555", "text-disabled": "#777777"},
 )
 
 ALL_THEMES = [THEME_VT340, THEME_AMBER, THEME_PHOSPHOR, THEME_IBM]

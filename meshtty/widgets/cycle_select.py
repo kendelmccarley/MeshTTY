@@ -26,7 +26,7 @@ class CycleSelect(Widget):
     CycleSelect {
         height: 1;
         width: 1fr;
-        color: $text;
+        color: $primary;
         padding: 0;
     }
     CycleSelect:focus {

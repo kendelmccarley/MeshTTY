@@ -128,7 +128,7 @@ ComposeBar Input {
 
 ComposeBar #prefix-selector {
     width: 12;
-    color: $text-disabled;
+    color: $secondary;
 }
 
 ComposeBar Button {
@@ -379,6 +379,15 @@ Button {
 Button:focus {
     color: $background;
     background: $primary;
+    border: none;
+}
+
+/* ── Input colors ─────────────────────────────────────────────────────────── */
+/* Textual's default $text variable is a computed grey regardless of theme.   */
+/* Override globally so Input text always uses the active theme color.        */
+
+Input {
+    color: $primary;
     border: none;
 }
 
