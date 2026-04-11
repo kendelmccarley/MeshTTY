@@ -11,6 +11,54 @@ App {
     background: $background;
 }
 
+/* ── VT220-Green phosphor overrides (active when vt220-green theme) ── */
+App.-theme-vt220-green Input {
+    border: solid $primary;
+    color: $primary;
+    background: $surface;
+}
+
+App.-theme-vt220-green Input:focus {
+    border: solid $accent;
+    color: $accent;
+}
+
+App.-theme-vt220-green Button {
+    border: solid $primary;
+    color: $primary;
+    background: $surface;
+    text-style: bold;
+}
+
+App.-theme-vt220-green Button:hover,
+App.-theme-vt220-green Button:focus {
+    background: $primary;
+    color: $background;
+    text-style: bold;
+}
+
+App.-theme-vt220-green Select {
+    border: solid $primary;
+    color: $primary;
+    background: $surface;
+}
+
+App.-theme-vt220-green Tabs {
+    border-bottom: solid $primary;
+    background: $background;
+}
+
+App.-theme-vt220-green Switch {
+    border: solid $secondary;
+    background: $surface;
+}
+
+App.-theme-vt220-green Switch.-on {
+    border: solid $accent;
+    background: $surface;
+}
+
+
 /* ── Terminal frame layer ─────────────────────────────────────────────────── */
 
 TerminalFrame {
@@ -194,6 +242,7 @@ DataTable > .datatable--header {
 DataTable > .datatable--cursor {
     background: $primary;
     color: $background;
+    text-style: bold;
 }
 
 /* ── Node detail modal ────────────────────────────────────────────────────── */

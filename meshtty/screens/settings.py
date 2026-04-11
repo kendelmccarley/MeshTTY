@@ -38,6 +38,7 @@ class SettingsView(Widget):
     SettingsView {
         height: 1fr;
         overflow-y: auto;
+        scrollbar-size: 0 0;
         padding: 0 2;
         layout: grid;
         grid-size: 2;

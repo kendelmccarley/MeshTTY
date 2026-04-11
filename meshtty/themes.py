@@ -54,22 +54,22 @@ THEME_AMBER = Theme(
 THEME_PHOSPHOR = Theme(
     name="vt220-green",
     dark=True,
-    background="#000000",
-    surface="#000a02",
-    panel="#001404",
-    foreground="#0ccc68",
-    primary="#0ccc68",
-    secondary="#08994e",
-    accent="#33ff88",
-    success="#00cc55",
-    warning="#089940",
-    error="#00ff66",
+    background="#000000",   # pure black — VT320 bezel/off pixels
+    surface="#010801",      # barely-there green tint behind content
+    panel="#011001",        # slightly brighter for panels
+    foreground="#2EE62E",   # P39 phosphor green (525 nm peak) — drives $text
+    primary="#2EE62E",      # P39 phosphor green (525 nm peak)
+    secondary="#1DB31D",    # mid-brightness phosphor
+    accent="#57FF57",       # highlight / cursor glow
+    success="#2EE62E",      # same phosphor for success
+    warning="#C8E600",      # yellow-green — phosphor pushed warm
+    error="#FF2200",        # red stays red (OSD-style alarm)
     variables={
-        "text-muted": "#0a5530",
-        "text-disabled": "#0a7a40",
-        "scrollbar": "#08994e",
-        "scrollbar-hover": "#0ccc68",
-        "scrollbar-active": "#33ff88",
+        "text-muted": "#155915",   # dim phosphor for labels/hints
+        "text-disabled": "#0d3d0d",
+        "scrollbar": "#1DB31D",
+        "scrollbar-hover": "#2EE62E",
+        "scrollbar-active": "#57FF57",
         "scrollbar-background": "#000000",
         "scrollbar-corner-color": "#000000",
     },

@@ -43,6 +43,7 @@ class NodeDetailModal(ModalScreen):
         border: round $primary;
         background: $surface;
         padding: 1 2;
+        scrollbar-size: 0 0;
     }
     #modal-container Label {
         padding: 0 0 1 0;
