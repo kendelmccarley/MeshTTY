@@ -6,7 +6,9 @@ Entry point: python -m meshtty.main
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
+import signal
 import sys
 
 from textual.app import App, ComposeResult
@@ -86,6 +88,15 @@ class MeshTTYApp(App):
     message_log: MessageLog | None = None
 
     def on_mount(self) -> None:
+        # Exit cleanly when the controlling terminal disappears (e.g. the host
+        # launcher process, such as MeshDEX, crashes or exits).  Textual runs
+        # inside asyncio, so we register via the event loop — this fires self.exit()
+        # on the loop rather than interrupting it from a raw C-level signal handler.
+        try:
+            asyncio.get_event_loop().add_signal_handler(signal.SIGHUP, self.exit)
+        except (OSError, NotImplementedError):
+            pass  # Windows or non-main-thread loop — skip gracefully
+
         self.config = load_config()
         _setup_logging(self.config.log_level, debug=self._debug)
         if self._debug:
